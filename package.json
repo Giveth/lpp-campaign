@@ -1,0 +1,47 @@
+{
+  "name": "lpp-campaign",
+  "version": "0.0.1",
+  "description": "Simple campaign plugin with reviewer for liquid plading.",
+  "main": "lib/LPPCampaign.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "scripts": {
+    "test": "[ ! -d build ] && npm run sol-compile; mocha --harmony",
+    "sol-compile": "solcpiler",
+    "js-compile": "babel --source-maps -d lib/ js/",
+    "compile": "npm run sol-compile; npm run js-compile",
+    "prepublish": "npm run compile"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Giveth/lpp-campaign.git"
+  },
+  "keywords": [
+    "liquid",
+    "pledging",
+    "ethereum",
+    "solidity",
+    "campaign"
+  ],
+  "author": "perissology",
+  "license": "GPL-3.0",
+  "bugs": {
+    "url": "https://github.com/Giveth/lpp-campaign/issues"
+  },
+  "homepage": "https://github.com/Giveth/lpp-campaign#readme",
+  "dependencies": {
+    "chai": "^4.1.2",
+    "eth-contract-class": "0.0.4",
+    "liquidpledging": "git://github.com/perissology/liquidpledging.git#363157ac29b6e5f56d61126e712320f776a12577"
+  },
+  "devDependencies": {
+    "babel-cli": "^6.26.0",
+    "babel-preset-env": "^1.6.0",
+    "eslint": "^4.3.0",
+    "ethereumjs-testrpc": "git://github.com/perissology/testrpc.git#81216dbc",
+    "lerna": "^2.2.0",
+    "solcpiler": "0.0.4",
+    "web3": "git://github.com/perissology/web3.js.git#all_fixes"
+  }
+}
