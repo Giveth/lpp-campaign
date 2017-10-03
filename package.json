@@ -1,14 +1,14 @@
 {
   "name": "lpp-campaign",
-  "version": "0.0.1",
-  "description": "Simple campaign plugin with reviewer for liquid plading.",
+  "version": "0.0.2",
+  "description": "Simple campaign plugin with reviewer for liquidpledging.",
   "main": "lib/LPPCampaign.js",
   "directories": {
     "lib": "lib"
   },
   "scripts": {
-    "test": "[ ! -d build ] && npm run sol-compile; mocha --harmony",
-    "sol-compile": "solcpiler",
+    "test": "[ ! -d build/contracts ] && npm run sol-compile; mocha --harmony",
+    "sol-compile": "truffle compile",
     "js-compile": "babel --source-maps -d lib/ js/",
     "compile": "npm run sol-compile; npm run js-compile",
     "prepublish": "npm run compile"
@@ -41,7 +41,7 @@
     "eslint": "^4.3.0",
     "ethereumjs-testrpc": "git://github.com/perissology/testrpc.git#81216dbc",
     "lerna": "^2.2.0",
-    "solcpiler": "0.0.4",
+    "truffle": "^4.0.0-beta.0",
     "web3": "git://github.com/perissology/web3.js.git#all_fixes"
   }
 }

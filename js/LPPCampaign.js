@@ -1,5 +1,5 @@
-const LPPCampaignABI = require('../build/LPPCampaign.sol').LPPCampaignAbi;
-const LPPCampaignByteCode = require('../build/LPPCampaign.sol').LPPCampaignByteCode;
+const LPPCampaignABI = require('../build/contracts/LPPCampaign.json').abi;
+const LPPCampaignByteCode = require('../build/contracts/LPPCampaign.json').bytecode;
 const generateClass = require('eth-contract-class').default;
 
 const LPPCampaign = generateClass(LPPCampaignABI, LPPCampaignByteCode);
