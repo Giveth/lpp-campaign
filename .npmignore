@@ -1,3 +1,4 @@
 js
 contracts
 .babelrc
+!build/contracts
