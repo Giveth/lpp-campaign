@@ -13,15 +13,11 @@ contract LPPCampaign is Owned {
     uint64 public idProject;
     address public reviewer;
     address public newReviewer;
-    CampaignStatus public status;
+    bool public canceled;
 
-    enum CampaignStatus { Active, Canceled }
-
-    event CampaignCanceled(address indexed liquidPledging);
-
-    function LPPCampaign(LiquidPledging _liquidPledging, string name, uint64 parentProject, address _reviewer) {
+    function LPPCampaign(LiquidPledging _liquidPledging, string name, string url, uint64 parentProject, address _reviewer) {
         liquidPledging = _liquidPledging;
-        idProject = liquidPledging.addProject(name, address(this), parentProject, 0, ILiquidPledgingPlugin(this));
+        idProject = liquidPledging.addProject(name, url, address(this), parentProject, 0, ILiquidPledgingPlugin(this));
         reviewer = _reviewer;
     }
 
@@ -45,30 +41,29 @@ contract LPPCampaign is Owned {
         newReviewer = 0;
     }
 
-    function beforeTransfer(uint64 noteManager, uint64 noteFrom, uint64 noteTo, uint64 context, uint amount) returns (uint maxAllowed) {
+    function beforeTransfer(uint64 pledgeAdmin, uint64 pledgeFrom, uint64 pledgeTo, uint64 context, uint amount) returns (uint maxAllowed) {
         require(msg.sender == address(liquidPledging));
-        var (, , , fromProposedProject , , , ) = liquidPledging.getNote(noteFrom);
+        var (, , , fromProposedProject , , , ) = liquidPledging.getPledge(pledgeFrom);
+        var (, , , , , , toPaymentState ) = liquidPledging.getPledge(pledgeTo);
         // If I'm the proposed recipient of delegated funds or funds are being directly transferred to me, ensure the I am still active
         if (   (context == TO_PROPOSEDPROJECT)
             || (   (context == TO_OWNER)
-                && (fromProposedProject != idProject)))
+                && (fromProposedProject != idProject) && (toPaymentState == LiquidPledgingBase.PaymentState.Pledged)))
         {
-            if (status != CampaignStatus.Active) return 0;
+            if (canceled) return 0;
         }
         return amount;
     }
 
-    function afterTransfer(uint64 noteManager, uint64 noteFrom, uint64 noteTo, uint64 context, uint amount) {
+    function afterTransfer(uint64 pledgeAdmin, uint64 pledgeFrom, uint64 pledgeTo, uint64 context, uint amount) {
         // do nothing
     }
 
 
     function cancelCampaign() onlyOwnerOrReviewer {
-        require( status == CampaignStatus.Active );
+        require( !canceled );
 
         liquidPledging.cancelProject(idProject);
-
-        status = CampaignStatus.Canceled;
-        CampaignCanceled(address(liquidPledging));
+        canceled = true;
     }
 }
