@@ -1025,4 +1025,9 @@ contract LPPCampaign is Owned {
         liquidPledging.cancelProject(idProject);
         canceled = true;
     }
+
+    function transfer(uint64 idSender, uint64 idPledge, uint amount, uint64 idReceiver) onlyOwner {
+      require( !canceled );
+      liquidPledging.transfer(idSender, idPledge, amount, idReceiver);
+    }
 }
