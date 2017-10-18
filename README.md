@@ -1,4 +1,4 @@
-# lpp-campaign
+![LPP Campaign~](readme-header.png)
 
 > Ethereum contract for liquid pledging campaign plugin
 
