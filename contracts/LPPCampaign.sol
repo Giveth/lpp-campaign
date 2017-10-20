@@ -13,7 +13,6 @@ contract LPPCampaign is Owned {
     uint64 public idProject;
     address public reviewer;
     address public newReviewer;
-    bool public canceled;
 
     function LPPCampaign(LiquidPledging _liquidPledging, string name, string url, uint64 parentProject, address _reviewer) {
         liquidPledging = _liquidPledging;
@@ -31,17 +30,17 @@ contract LPPCampaign is Owned {
         _;
     }
 
-    function changeReviewer(address _newReviewer) onlyReviewer {
+    function changeReviewer(address _newReviewer) public onlyReviewer {
         newReviewer = _newReviewer;
     }
 
-    function acceptNewReviewer() {
+    function acceptNewReviewer() public {
         require(newReviewer == msg.sender);
         reviewer = newReviewer;
         newReviewer = 0;
     }
 
-    function beforeTransfer(uint64 pledgeAdmin, uint64 pledgeFrom, uint64 pledgeTo, uint64 context, uint amount) returns (uint maxAllowed) {
+    function beforeTransfer(uint64 pledgeAdmin, uint64 pledgeFrom, uint64 pledgeTo, uint64 context, uint amount) external returns (uint maxAllowed) {
         require(msg.sender == address(liquidPledging));
         var (, , , fromProposedProject , , , ) = liquidPledging.getPledge(pledgeFrom);
         var (, , , , , , toPaymentState ) = liquidPledging.getPledge(pledgeTo);
@@ -50,25 +49,28 @@ contract LPPCampaign is Owned {
             || (   (context == TO_OWNER)
                 && (fromProposedProject != idProject) && (toPaymentState == LiquidPledgingBase.PaymentState.Pledged)))
         {
-            if (canceled) return 0;
+            if (isCanceled()) return 0;
         }
         return amount;
     }
 
-    function afterTransfer(uint64 pledgeAdmin, uint64 pledgeFrom, uint64 pledgeTo, uint64 context, uint amount) {
+    function afterTransfer(uint64 pledgeAdmin, uint64 pledgeFrom, uint64 pledgeTo, uint64 context, uint amount) external {
         // do nothing
     }
 
 
-    function cancelCampaign() onlyOwnerOrReviewer {
-        require( !canceled );
+    function cancelCampaign() public onlyOwnerOrReviewer {
+        require( !isCanceled() );
 
         liquidPledging.cancelProject(idProject);
-        canceled = true;
     }
 
-    function transfer(uint64 idSender, uint64 idPledge, uint amount, uint64 idReceiver) onlyOwner {
-      require( !canceled );
+    function transfer(uint64 idSender, uint64 idPledge, uint amount, uint64 idReceiver) public onlyOwner {
+      require( !isCanceled() );
       liquidPledging.transfer(idSender, idPledge, amount, idReceiver);
+    }
+
+    function isCanceled() public constant returns (bool) {
+      return liquidPledging.isProjectCanceled(idProject);
     }
 }
