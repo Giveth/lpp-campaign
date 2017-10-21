@@ -1,6 +1,6 @@
 {
   "name": "lpp-campaign",
-  "version": "0.0.6",
+  "version": "0.0.8",
   "description": "Simple campaign plugin with reviewer for liquidpledging.",
   "main": "lib/LPPCampaign.js",
   "directories": {
@@ -32,8 +32,8 @@
   "homepage": "https://github.com/Giveth/lpp-campaign#readme",
   "dependencies": {
     "chai": "^4.1.2",
-    "eth-contract-class": "0.0.4",
-    "liquidpledging": "git://github.com/Giveth/liquidpledging.git#fd88f22a6ffa3cfce1fcbc1bc3421726ac6e61b9"
+    "eth-contract-class": "0.0.5",
+    "liquidpledging": "0.0.10"
   },
   "devDependencies": {
     "babel-cli": "^6.26.0",
@@ -41,7 +41,7 @@
     "eslint": "^4.3.0",
     "ethereumjs-testrpc": "git://github.com/perissology/testrpc.git#81216dbc",
     "lerna": "^2.2.0",
-	"solcpiler": "0.0.5",
+    "solcpiler": "0.0.5",
     "web3": "git://github.com/perissology/web3.js.git#all_fixes"
   }
 }

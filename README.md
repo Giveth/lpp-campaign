@@ -40,3 +40,6 @@ This plugin is currently being used by the Giveth [dapp](https://github.com/Give
 
 ## Help
 Reach out to us on [slack](http://slack.giveth.io) for any help or to share ideas.
+
+## Tests
+Currently a test is not passing when using testrpc, but will pass when using parity private chain (haven't tested geth). You'll need to unlock 4 accounts for the tests to run.

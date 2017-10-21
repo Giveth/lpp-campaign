@@ -197,7 +197,6 @@ contract LiquidPledgingBase {
         if (parentProject != 0) {
             PledgeAdmin storage pa = findAdmin(parentProject);
             require(pa.adminType == PledgeAdminType.Project);
-            require(pa.addr == msg.sender);
             require(getProjectLevel(pa) < MAX_SUBPROJECT_LEVEL);
         }
 
@@ -496,6 +495,7 @@ function donate(uint64 idGiver, uint64 idReceiver) payable {
             } else if (receiver.adminType == PledgeAdminType.Project) {
                 transferOwnershipToProject(idPledge, amount, idReceiver);
             } else if (receiver.adminType == PledgeAdminType.Delegate) {
+                idPledge = undelegate(idPledge, amount, n.delegationChain.length);
                 appendDelegate(idPledge, amount, idReceiver);
             } else {
                 assert(false);
@@ -521,14 +521,14 @@ function donate(uint64 idGiver, uint64 idReceiver) payable {
 
                 // If the receiver is not in the delegate list
                 if (receiverDIdx == NOTFOUND) {
-                    undelegate(idPledge, amount, n.delegationChain.length - senderDIdx - 1);
+                    idPledge = undelegate(idPledge, amount, n.delegationChain.length - senderDIdx - 1);
                     appendDelegate(idPledge, amount, idReceiver);
 
                 // If the receiver is already part of the delegate chain and is
                 // after the sender, then all of the other delegates after the sender are
                 // removed and the receiver is appended at the end of the delegation chain
                 } else if (receiverDIdx > senderDIdx) {
-                    undelegate(idPledge, amount, n.delegationChain.length - senderDIdx - 1);
+                    idPledge = undelegate(idPledge, amount, n.delegationChain.length - senderDIdx - 1);
                     appendDelegate(idPledge, amount, idReceiver);
 
                 // If the receiver is already part of the delegate chain and is
@@ -545,7 +545,7 @@ function donate(uint64 idGiver, uint64 idReceiver) payable {
             // If the delegate wants to support a project, they undelegate all
             // the delegates after them in the chain and choose a project
             if (receiver.adminType == PledgeAdminType.Project) {
-                undelegate(idPledge, amount, n.delegationChain.length - senderDIdx - 1);
+                idPledge = undelegate(idPledge, amount, n.delegationChain.length - senderDIdx - 1);
                 proposeAssignProject(idPledge, amount, idReceiver);
                 return;
             }
@@ -768,7 +768,7 @@ function donate(uint64 idGiver, uint64 idReceiver) payable {
     }
 
     /// @param q Number of undelegations
-    function undelegate(uint64 idPledge, uint amount, uint q) internal {
+    function undelegate(uint64 idPledge, uint amount, uint q) internal returns (uint64){
         Pledge storage n = findPledge(idPledge);
         uint64[] memory newDelegationChain = new uint64[](n.delegationChain.length - q);
         for (uint i=0; i<n.delegationChain.length - q; i++) {
@@ -782,6 +782,8 @@ function donate(uint64 idGiver, uint64 idReceiver) payable {
                 n.oldPledge,
                 PaymentState.Pledged);
         doTransfer(idPledge, toPledge, amount);
+
+        return toPledge;
     }
 
 
@@ -962,6 +964,15 @@ pragma solidity ^0.4.13;
 
 
 
+/// @title LPPCampaign
+/// @author perissology <perissology@protonmail.com>
+/// @notice The LPPCampaign contract is a plugin contract for liquidPledging,
+///  extending the functionality of a liquidPledging project. This contract
+///  prevents withdrawals from any pledges this contract is the owner of.
+///  This contract has 2 roles. The owner and a reviewer. The owner can transfer or cancel
+///  any pledges this contract owns. The reviewer can only cancel the pledges.
+///  If this contract is canceled, all pledges will be rolled back to the previous owner
+///  and will reject all future pledge transfers to the pledgeAdmin represented by this contract
 contract LPPCampaign is Owned {
     uint constant FROM_OWNER = 0;
     uint constant FROM_PROPOSEDPROJECT = 255;
@@ -972,9 +983,14 @@ contract LPPCampaign is Owned {
     uint64 public idProject;
     address public reviewer;
     address public newReviewer;
-    bool public canceled;
 
-    function LPPCampaign(LiquidPledging _liquidPledging, string name, string url, uint64 parentProject, address _reviewer) {
+    function LPPCampaign(
+        LiquidPledging _liquidPledging,
+        string name,
+        string url,
+        uint64 parentProject,
+        address _reviewer
+    ) {
         liquidPledging = _liquidPledging;
         idProject = liquidPledging.addProject(name, url, address(this), parentProject, 0, ILiquidPledgingPlugin(this));
         reviewer = _reviewer;
@@ -990,44 +1006,63 @@ contract LPPCampaign is Owned {
         _;
     }
 
-    function changeReviewer(address _newReviewer) onlyReviewer {
+    function changeReviewer(address _newReviewer) public onlyReviewer {
         newReviewer = _newReviewer;
     }
 
-    function acceptNewReviewer() {
+    function acceptNewReviewer() public {
         require(newReviewer == msg.sender);
         reviewer = newReviewer;
         newReviewer = 0;
     }
 
-    function beforeTransfer(uint64 pledgeAdmin, uint64 pledgeFrom, uint64 pledgeTo, uint64 context, uint amount) returns (uint maxAllowed) {
+    function beforeTransfer(
+        uint64 pledgeAdmin,
+        uint64 pledgeFrom,
+        uint64 pledgeTo,
+        uint64 context,
+        uint amount
+    ) external returns (uint maxAllowed) {
         require(msg.sender == address(liquidPledging));
         var (, , , fromProposedProject , , , ) = liquidPledging.getPledge(pledgeFrom);
         var (, , , , , , toPaymentState ) = liquidPledging.getPledge(pledgeTo);
-        // If I'm the proposed recipient of delegated funds or funds are being directly transferred to me, ensure the I am still active
-        if (   (context == TO_PROPOSEDPROJECT)
-            || (   (context == TO_OWNER)
-                && (fromProposedProject != idProject) && (toPaymentState == LiquidPledgingBase.PaymentState.Pledged)))
+
+        // campaigns can not withdraw funds
+        if ( (context == TO_OWNER) && (toPaymentState != LiquidPledgingBase.PaymentState.Pledged) ) return 0;
+
+        // If this campaign is the proposed recipient of delegated funds or funds are being directly
+        // transferred to me, ensure that the campaign has not been canceled
+        if ( (context == TO_PROPOSEDPROJECT)
+            || ( (context == TO_OWNER) && (fromProposedProject != idProject) ))
         {
-            if (canceled) return 0;
+            if (isCanceled()) return 0;
         }
         return amount;
     }
 
-    function afterTransfer(uint64 pledgeAdmin, uint64 pledgeFrom, uint64 pledgeTo, uint64 context, uint amount) {
+    function afterTransfer(
+        uint64 pledgeAdmin,
+        uint64 pledgeFrom,
+        uint64 pledgeTo,
+        uint64 context,
+        uint amount
+    ) external {
         // do nothing
     }
 
-
-    function cancelCampaign() onlyOwnerOrReviewer {
-        require( !canceled );
+    function cancelCampaign() public onlyOwnerOrReviewer {
+        require( !isCanceled() );
 
         liquidPledging.cancelProject(idProject);
-        canceled = true;
     }
 
-    function transfer(uint64 idSender, uint64 idPledge, uint amount, uint64 idReceiver) onlyOwner {
-      require( !canceled );
+    function transfer(uint64 idSender, uint64 idPledge, uint amount, uint64 idReceiver) public onlyOwner {
+      require( !isCanceled() );
+
       liquidPledging.transfer(idSender, idPledge, amount, idReceiver);
+    }
+
+    function isCanceled() public constant returns (bool) {
+      return liquidPledging.isProjectCanceled(idProject);
     }
 }
