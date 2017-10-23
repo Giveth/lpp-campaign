@@ -110,7 +110,7 @@ describe('LPPCampaign test', function() {
   });
 
   it('Owner should not be able to change reviewer', async function() {
-    assertFail(campaign.changeReviewer(reviewer1, { from: campaignOwner1 }));
+    await assertFail(async () => await campaign.changeReviewer(reviewer1, { from: campaignOwner1 }));
   });
 
   it('Reviewer should be able to cancel campaign', async function() {
@@ -128,7 +128,7 @@ describe('LPPCampaign test', function() {
   });
 
   it('Random should not be able to cancel campaign', async function() {
-    assertFail(campaign.cancelCampaign({ from: accounts[9] }));
+    await assertFail(async () => await campaign.cancelCampaign({ from: accounts[9] }));
   });
 
   it('Owner should be able to cancel campaign', async function() {
