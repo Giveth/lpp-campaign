@@ -50,13 +50,13 @@ describe('LPPCampaign test', function() {
   });
 
   it('Should deploy LPPCampaign contract and add project to liquidPledging', async () => {
-    vault = await Vault.new(web3, { gas: 3000000 });
-    liquidPledging = await LiquidPledging.new(web3, vault.$address, { gas: 5800000 });
+    vault = await Vault.new(web3);
+    liquidPledging = await LiquidPledging.new(web3, vault.$address);
     await vault.setLiquidPledging(liquidPledging.$address);
 
     liquidPledgingState = new LiquidPledgingState(liquidPledging);
 
-    campaign = await LPPCampaign.new(web3, liquidPledging.$address, 'Campaign 1', 'URL1', 0, reviewer1, { from: campaignOwner1, gas: 1000000 }); // pledgeAdmin #1
+    campaign = await LPPCampaign.new(web3, liquidPledging.$address, 'Campaign 1', 'URL1', 0, reviewer1, { from: campaignOwner1}); // pledgeAdmin #1
 
     const lpState = await liquidPledgingState.getState();
     assert.equal(lpState.admins.length, 2);
@@ -77,8 +77,8 @@ describe('LPPCampaign test', function() {
   });
 
   it('Should accept transfers if not canceled', async function() {
-    await liquidPledging.addGiver('Giver1', 'URL', 0, 0x0, { from: giver1, gas: 1000000 }); // pledgeAdmin #2
-    await liquidPledging.donate(2, 1, { from: giver1, value: 1000, gas: 1000000 });
+    await liquidPledging.addGiver('Giver1', 'URL', 0, 0x0, { from: giver1 }); // pledgeAdmin #2
+    await liquidPledging.donate(2, 1, { from: giver1, value: 1000 });
 
     const st = await liquidPledgingState.getState();
     assert(st.pledges[2].amount, 1000);
@@ -102,7 +102,7 @@ describe('LPPCampaign test', function() {
     assert.equal(st.reviewer, reviewer1);
     assert.equal(st.newReviewer, reviewer2);
 
-    await campaign.acceptNewReviewer({ from: reviewer2 });
+    await campaign.acceptNewReviewer({ from: reviewer2, gas: 40000 });
 
     const st2 = await campaign.getState();
     assert.equal(st2.reviewer, reviewer2);

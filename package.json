@@ -32,7 +32,7 @@
   "homepage": "https://github.com/Giveth/lpp-campaign#readme",
   "dependencies": {
     "chai": "^4.1.2",
-    "eth-contract-class": "0.0.5",
+    "eth-contract-class": "0.0.6",
     "liquidpledging": "0.0.10"
   },
   "devDependencies": {
