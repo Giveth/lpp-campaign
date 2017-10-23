@@ -26,17 +26,13 @@ describe('LPPCampaign test', function() {
   let testrpc;
 
   before(async () => {
-    // testrpc = TestRPC.server({
-    //   ws: true,
-    //   gasLimit: 6500000,
-    //   total_accounts: 10,
-    // });
+    testrpc = TestRPC.server({
+      ws: true,
+      gasLimit: 6500000,
+      total_accounts: 10,
+    });
 
-    // testrpc.listen(8546, '127.0.0.1', (err) => {
-    //   if (err) {
-        // console.log(err);
-      // }
-    // });
+    testrpc.listen(8546, '127.0.0.1', (err) => {});
 
     web3 = new Web3('ws://localhost:8546');
     accounts = await web3.eth.getAccounts();
@@ -44,14 +40,14 @@ describe('LPPCampaign test', function() {
     giver1 = accounts[1];
     project1 = accounts[2];
     campaignOwner1 = accounts[3];
-    reviewer1 = accounts[0];
-    reviewer2 = accounts[1];
+    reviewer1 = accounts[4];
+    reviewer2 = accounts[5];
   });
 
-  // after((done) => {
-  //   testrpc.close();
-  //   done();
-  // });
+  after((done) => {
+    testrpc.close();
+    done();
+  });
 
   it('Should deploy LPPCampaign contract and add project to liquidPledging', async () => {
     vault = await Vault.new(web3, { gas: 3000000 });
@@ -91,7 +87,7 @@ describe('LPPCampaign test', function() {
 
   it('Should be able to transfer pledge to another project', async function() {
     await liquidPledging.addProject('Project1', 'URL', project1, 0, 0, 0x0, { from: project1, gas: 1000000 }); // pledgeAdmin #3
-    await campaign.transfer(1, 2, 1000, 3, { from: campaignOwner1 });
+    await campaign.transfer(1, 2, 1000, 3, { from: campaignOwner1, gas: 300000 });
 
     const st = await liquidPledgingState.getState();
     assert(st.pledges[3].amount, 1000);
