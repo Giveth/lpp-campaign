@@ -96,13 +96,13 @@ describe('LPPCampaign test', function() {
     await liquidPledging.donate(2, 1, { from: giver1, value: 1000 });
 
     const st = await liquidPledgingState.getState();
-    assert(st.pledges[2].amount, 1000);
-    assert(st.pledges[2].owner, 1);
+    assert.equal(st.pledges[2].amount, 1000);
+    assert.equal(st.pledges[2].owner, 1);
 
     const giverTokenBal = await minime.balanceOf(giver1);
     const totalTokenSupply = await minime.totalSupply();
-    assert(giverTokenBal, 1000);
-    assert(totalTokenSupply, 1000);
+    assert.equal(giverTokenBal, 1000);
+    assert.equal(totalTokenSupply, 1000);
   });
 
   it('Should be able to transfer pledge to another project', async function() {
@@ -110,9 +110,9 @@ describe('LPPCampaign test', function() {
     await campaign.transfer(1, 2, 1000, 3, { from: campaignOwner1, gas: 300000 });
 
     const st = await liquidPledgingState.getState();
-    assert(st.pledges[3].amount, 1000);
-    assert(st.pledges[3].owner, 3);
-    assert(st.pledges[2].amount, 0);
+    assert.equal(st.pledges[4].amount, 1000);
+    assert.equal(st.pledges[4].owner, 3);
+    assert.equal(st.pledges[2].amount, 0);
   });
 
   it('Should be able to change reviewer', async function() {
@@ -156,6 +156,5 @@ describe('LPPCampaign test', function() {
 
     const canceled = await campaign.isCanceled();
     assert.equal(canceled, true);
-    console.log(JSON.stringify(await liquidPledgingState.getState(), null, 2));
   });
 });
