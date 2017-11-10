@@ -1706,7 +1706,16 @@ contract LPPCampaign is Owned, TokenController {
         uint64 context,
         uint amount
     ) external {
-        // do nothing
+      require(msg.sender == address(liquidPledging));
+      var (, , , , , , toPaymentState ) = liquidPledging.getPledge(pledgeTo);
+
+      // only issue tokens when pledge is committed to this campaign
+      if ( (context == TO_OWNER) && (toPaymentState == LiquidPledgingBase.PaymentState.Pledged)) {
+        var (, owner, , , , , ) = liquidPledging.getPledge(pledgeFrom);
+        var (, addr , , , , , , ) = liquidPledging.getPledgeAdmin(owner);
+
+        token.generateTokens(addr, amount);
+      }
     }
 
     function cancelCampaign() public onlyOwnerOrReviewer {
