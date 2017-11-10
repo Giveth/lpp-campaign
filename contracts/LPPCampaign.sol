@@ -1,7 +1,7 @@
 pragma solidity ^0.4.13;
 
 import "../node_modules/liquidpledging/contracts/LiquidPledging.sol";
-import "./Owned.sol";
+import "../node_modules/giveth-common-contracts/contracts/Owned.sol";
 
 /// @title LPPCampaign
 /// @author perissology <perissology@protonmail.com>
