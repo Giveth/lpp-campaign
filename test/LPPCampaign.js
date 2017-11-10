@@ -4,6 +4,8 @@ const TestRPC = require('ethereumjs-testrpc');
 const chai = require('chai');
 const { Vault, LiquidPledging, LiquidPledgingState } = require('liquidpledging');
 const LPPCampaign = require('../lib/LPPCampaign');
+const MiniMeToken = require('minimetoken/js/minimetoken');
+const MiniMeTokenState = require('minimetoken/js/minimetokenstate');
 const Web3 = require('web3');
 
 const assert = chai.assert;
@@ -18,7 +20,10 @@ describe('LPPCampaign test', function() {
   let liquidPledgingState;
   let vault;
   let campaign;
+  let minime;
+  let minimeTokenState;
   let giver1;
+  let giver2;
   let project1;
   let campaignOwner1;
   let reviewer1;
@@ -42,6 +47,7 @@ describe('LPPCampaign test', function() {
     campaignOwner1 = accounts[3];
     reviewer1 = accounts[4];
     reviewer2 = accounts[5];
+    giver2 = accounts[6];
   });
 
   after((done) => {
@@ -56,7 +62,10 @@ describe('LPPCampaign test', function() {
 
     liquidPledgingState = new LiquidPledgingState(liquidPledging);
 
-    campaign = await LPPCampaign.new(web3, liquidPledging.$address, 'Campaign 1', 'URL1', 0, reviewer1, { from: campaignOwner1}); // pledgeAdmin #1
+    campaign = await LPPCampaign.new(web3, liquidPledging.$address, 'Campaign 1', 'URL1', 0, reviewer1, 'Campaign 1 Token', 'CPG', { from: campaignOwner1}); // pledgeAdmin #1
+
+    minime = new MiniMeToken(web3, await campaign.token());
+    minimeTokenState = new MiniMeTokenState(minime);
 
     const lpState = await liquidPledgingState.getState();
     assert.equal(lpState.admins.length, 2);
@@ -74,6 +83,12 @@ describe('LPPCampaign test', function() {
     assert.equal(cState.reviewer, reviewer1);
     assert.equal(cState.newReviewer, '0x0000000000000000000000000000000000000000');
     assert.equal(cState.canceled, false);
+
+    const tState = await minimeTokenState.getState();
+    assert.equal(tState.totalSupply, 0);
+    assert.equal(tState.name, 'Campaign 1 Token');
+    assert.equal(tState.controller, campaign.$address);
+    assert.equal(await minime.symbol(), 'CPG');
   });
 
   it('Should accept transfers if not canceled', async function() {
@@ -83,6 +98,11 @@ describe('LPPCampaign test', function() {
     const st = await liquidPledgingState.getState();
     assert(st.pledges[2].amount, 1000);
     assert(st.pledges[2].owner, 1);
+
+    const giverTokenBal = await minime.balanceOf(giver1);
+    const totalTokenSupply = await minime.totalSupply();
+    assert(giverTokenBal, 1000);
+    assert(totalTokenSupply, 1000);
   });
 
   it('Should be able to transfer pledge to another project', async function() {
@@ -121,7 +141,7 @@ describe('LPPCampaign test', function() {
   });
 
   it('Should deploy another campaign', async function() {
-    campaign = await LPPCampaign.new(web3, liquidPledging.$address, 'Campaign 2', 'URL2', 0, reviewer1, { from: campaignOwner1, gas: 1000000 }); // pledgeAdmin #4
+    campaign = await LPPCampaign.new(web3, liquidPledging.$address, 'Campaign 2', 'URL2', 0, reviewer1, 'Campaign 2 Token', 'CPG2', { from: campaignOwner1 }); // pledgeAdmin #4
 
     const canceled = await campaign.isCanceled();
     assert.equal(canceled, false);
@@ -136,5 +156,6 @@ describe('LPPCampaign test', function() {
 
     const canceled = await campaign.isCanceled();
     assert.equal(canceled, true);
+    console.log(JSON.stringify(await liquidPledgingState.getState(), null, 2));
   });
 });

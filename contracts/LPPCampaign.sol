@@ -2,6 +2,7 @@ pragma solidity ^0.4.13;
 
 import "../node_modules/liquidpledging/contracts/LiquidPledging.sol";
 import "../node_modules/giveth-common-contracts/contracts/Owned.sol";
+import "../node_modules/minimetoken/contracts/MiniMeToken.sol";
 
 /// @title LPPCampaign
 /// @author perissology <perissology@protonmail.com>
@@ -12,13 +13,14 @@ import "../node_modules/giveth-common-contracts/contracts/Owned.sol";
 ///  any pledges this contract owns. The reviewer can only cancel the pledges.
 ///  If this contract is canceled, all pledges will be rolled back to the previous owner
 ///  and will reject all future pledge transfers to the pledgeAdmin represented by this contract
-contract LPPCampaign is Owned {
+contract LPPCampaign is Owned, TokenController {
     uint constant FROM_OWNER = 0;
     uint constant FROM_PROPOSEDPROJECT = 255;
     uint constant TO_OWNER = 256;
     uint constant TO_PROPOSEDPROJECT = 511;
 
     LiquidPledging public liquidPledging;
+    MiniMeToken public token;
     uint64 public idProject;
     address public reviewer;
     address public newReviewer;
@@ -28,9 +30,13 @@ contract LPPCampaign is Owned {
         string name,
         string url,
         uint64 parentProject,
-        address _reviewer
+        address _reviewer,
+        string _tokenName,
+        string _tokenSymbol
     ) {
         liquidPledging = _liquidPledging;
+        MiniMeTokenFactory tokenFactory = new MiniMeTokenFactory();
+        token = new MiniMeToken(tokenFactory, 0x0, 0, _tokenName, 18, _tokenSymbol, false);
         idProject = liquidPledging.addProject(name, url, address(this), parentProject, 0, ILiquidPledgingPlugin(this));
         reviewer = _reviewer;
     }
@@ -86,7 +92,15 @@ contract LPPCampaign is Owned {
         uint64 context,
         uint amount
     ) external {
-        // do nothing
+      var (amount , , , , , , toPaymentState ) = liquidPledging.getPledge(pledgeTo);
+
+      // only issue tokens when pledge is committed to this campaign
+      if ( (context == TO_OWNER) && (toPaymentState == LiquidPledgingBase.PaymentState.Pledged)) {
+        var (, owner, , , , , ) = liquidPledging.getPledge(pledgeFrom);
+        var (, addr , , , , , , ) = liquidPledging.getPledgeAdmin(owner);
+
+        token.generateTokens(addr, amount);
+      }
     }
 
     function cancelCampaign() public onlyOwnerOrReviewer {
@@ -104,4 +118,35 @@ contract LPPCampaign is Owned {
     function isCanceled() public constant returns (bool) {
       return liquidPledging.isProjectCanceled(idProject);
     }
+
+////////////////
+// TokenController
+////////////////
+
+  /// @notice Called when `_owner` sends ether to the MiniMe Token contract
+  /// @param _owner The address that sent the ether to create tokens
+  /// @return True if the ether is accepted, false if it throws
+  function proxyPayment(address _owner) public payable returns(bool) {
+    return false;
+  }
+
+  /// @notice Notifies the controller about a token transfer allowing the
+  ///  controller to react if desired
+  /// @param _from The origin of the transfer
+  /// @param _to The destination of the transfer
+  /// @param _amount The amount of the transfer
+  /// @return False if the controller does not authorize the transfer
+  function onTransfer(address _from, address _to, uint _amount) public returns(bool) {
+    return false;
+  }
+
+  /// @notice Notifies the controller about an approval allowing the
+  ///  controller to react if desired
+  /// @param _owner The address that calls `approve()`
+  /// @param _spender The spender in the `approve()` call
+  /// @param _amount The amount in the `approve()` call
+  /// @return False if the controller does not authorize the approval
+  function onApprove(address _owner, address _spender, uint _amount) public returns(bool) {
+    return false;
+  }
 }

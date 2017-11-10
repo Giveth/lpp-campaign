@@ -34,7 +34,8 @@
     "chai": "^4.1.2",
     "eth-contract-class": "0.0.6",
     "giveth-common-contracts": "0.4.0",
-    "liquidpledging": "0.0.10"
+    "liquidpledging": "0.0.10",
+    "minimetoken": "^0.2.0"
   },
   "devDependencies": {
     "babel-cli": "^6.26.0",
