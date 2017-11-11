@@ -1639,6 +1639,8 @@ contract LPPCampaign is Owned, TokenController {
     address public reviewer;
     address public newReviewer;
 
+    event GenerateTokens(address indexed liquidPledging, address addr, uint amount);
+
     function LPPCampaign(
         LiquidPledging _liquidPledging,
         string name,
@@ -1719,6 +1721,7 @@ contract LPPCampaign is Owned, TokenController {
         var (, fromAddr , , , , , , ) = liquidPledging.getPledgeAdmin(fromOwner);
 
         token.generateTokens(fromAddr, amount);
+        GenerateTokens(liquidPledging, fromAddr, amount);
       }
     }
 
