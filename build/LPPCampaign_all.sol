@@ -1708,13 +1708,17 @@ contract LPPCampaign is Owned, TokenController {
     ) external {
       require(msg.sender == address(liquidPledging));
       var (, , , , , , toPaymentState ) = liquidPledging.getPledge(pledgeTo);
+      var (, fromOwner, , , , fromOldPledge, ) = liquidPledging.getPledge(pledgeFrom);
 
-      // only issue tokens when pledge is committed to this campaign
-      if ( (context == TO_OWNER) && (toPaymentState == LiquidPledgingBase.PaymentState.Pledged)) {
-        var (, owner, , , , , ) = liquidPledging.getPledge(pledgeFrom);
-        var (, addr , , , , , , ) = liquidPledging.getPledgeAdmin(owner);
+      // only issue tokens when pledge is committed to this campaign and
+      // if the oldPledge == 0 (which most likely means that the donation came from a giver/delegate)
+      // this means that we don't generate tokens for project -> project donations
+      if ( (context == TO_OWNER) &&
+              (fromOldPledge == 0) &&
+              (toPaymentState == LiquidPledgingBase.PaymentState.Pledged)) {
+        var (, fromAddr , , , , , , ) = liquidPledging.getPledgeAdmin(fromOwner);
 
-        token.generateTokens(addr, amount);
+        token.generateTokens(fromAddr, amount);
       }
     }
 

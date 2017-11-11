@@ -91,7 +91,7 @@ describe('LPPCampaign test', function() {
     assert.equal(await minime.symbol(), 'CPG');
   });
 
-  it('Should accept transfers if not canceled', async function() {
+  it('Should accept transfers if not canceled and generate tokens', async function() {
     await liquidPledging.addGiver('Giver1', 'URL', 0, 0x0, { from: giver1 }); // pledgeAdmin #2
     await liquidPledging.donate(2, 1, { from: giver1, value: 1000 });
 
@@ -110,9 +110,20 @@ describe('LPPCampaign test', function() {
     await campaign.transfer(1, 2, 1000, 3, { from: campaignOwner1, gas: 300000 });
 
     const st = await liquidPledgingState.getState();
-    assert.equal(st.pledges[4].amount, 1000);
-    assert.equal(st.pledges[4].owner, 3);
+    assert.equal(st.pledges[3].amount, 1000);
+    assert.equal(st.pledges[3].owner, 3);
     assert.equal(st.pledges[2].amount, 0);
+  });
+
+  it('Should not generate tokens in project -> project transfer', async function() {
+    await liquidPledging.transfer(3, 3, 1000, 1, { from: project1 });
+
+    const st = await liquidPledgingState.getState();
+    assert.equal(st.pledges[4].amount, 1000);
+    assert.equal(st.pledges[3].amount, 0);
+
+    const totalTokenSupply = await minime.totalSupply();
+    assert.equal(totalTokenSupply, 1000);
   });
 
   it('Should be able to change reviewer', async function() {
