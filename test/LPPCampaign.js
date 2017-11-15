@@ -115,7 +115,7 @@ describe('LPPCampaign test', function() {
     assert.equal(st.pledges[2].amount, 0);
   });
 
-  it('Should not generate tokens in project -> project transfer', async function() {
+  it('Should generate tokens in project -> project transfer', async function() {
     await liquidPledging.transfer(3, 3, 1000, 1, { from: project1 });
 
     const st = await liquidPledgingState.getState();
@@ -123,7 +123,7 @@ describe('LPPCampaign test', function() {
     assert.equal(st.pledges[3].amount, 0);
 
     const totalTokenSupply = await minime.totalSupply();
-    assert.equal(totalTokenSupply, 1000);
+    assert.equal(totalTokenSupply, 2000);
   });
 
   it('Should be able to change reviewer', async function() {
