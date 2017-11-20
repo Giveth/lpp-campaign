@@ -3,6 +3,9 @@ const LPPCampaignByteCode = require('../build/LPPCampaign.sol').LPPCampaignByteC
 const generateClass = require('eth-contract-class').default;
 
 const LPPCampaign = generateClass(LPPCampaignABI, LPPCampaignByteCode);
+// need to deploy via factory contract
+delete LPPCampaign.new;
+
 
 LPPCampaign.prototype.getState = function () {
   return Promise.all([

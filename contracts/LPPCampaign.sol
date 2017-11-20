@@ -1,8 +1,8 @@
 pragma solidity ^0.4.13;
 
-import "../node_modules/liquidpledging/contracts/LiquidPledging.sol";
-import "../node_modules/giveth-common-contracts/contracts/Owned.sol";
-import "../node_modules/minimetoken/contracts/MiniMeToken.sol";
+import "liquidpledging/contracts/LiquidPledging.sol";
+import "giveth-common-contracts/contracts/Owned.sol";
+import "minimetoken/contracts/MiniMeToken.sol";
 
 /// @title LPPCampaign
 /// @author perissology <perissology@protonmail.com>
@@ -21,6 +21,7 @@ contract LPPCampaign is Owned, TokenController {
 
     LiquidPledging public liquidPledging;
     MiniMeToken public token;
+    bool public initPending;
     uint64 public idProject;
     address public reviewer;
     address public newReviewer;
@@ -28,19 +29,32 @@ contract LPPCampaign is Owned, TokenController {
     event GenerateTokens(address indexed liquidPledging, address addr, uint amount);
 
     function LPPCampaign(
+        string tokenName,
+        string tokenSymbol
+    ) {
+      require(msg.sender != tx.origin);
+      MiniMeTokenFactory tokenFactory = new MiniMeTokenFactory();
+      token = new MiniMeToken(tokenFactory, 0x0, 0, tokenName, 18, tokenSymbol, false);
+      initPending = true;
+    }
+
+    function init(
         LiquidPledging _liquidPledging,
         string name,
         string url,
         uint64 parentProject,
-        address _reviewer,
-        string _tokenName,
-        string _tokenSymbol
+        address _reviewer
     ) {
+        require(initPending);
         liquidPledging = _liquidPledging;
-        MiniMeTokenFactory tokenFactory = new MiniMeTokenFactory();
-        token = new MiniMeToken(tokenFactory, 0x0, 0, _tokenName, 18, _tokenSymbol, false);
         idProject = liquidPledging.addProject(name, url, address(this), parentProject, 0, ILiquidPledgingPlugin(this));
         reviewer = _reviewer;
+        initPending = false;
+    }
+
+    modifier initialized() {
+      require(!initPending);
+      _;
     }
 
     modifier onlyReviewer() {
@@ -53,11 +67,11 @@ contract LPPCampaign is Owned, TokenController {
         _;
     }
 
-    function changeReviewer(address _newReviewer) public onlyReviewer {
+    function changeReviewer(address _newReviewer) public initialized onlyReviewer {
         newReviewer = _newReviewer;
     }
 
-    function acceptNewReviewer() public {
+    function acceptNewReviewer() public initialized {
         require(newReviewer == msg.sender);
         reviewer = newReviewer;
         newReviewer = 0;
@@ -69,7 +83,7 @@ contract LPPCampaign is Owned, TokenController {
         uint64 pledgeTo,
         uint64 context,
         uint amount
-    ) external returns (uint maxAllowed) {
+    ) external initialized returns (uint maxAllowed) {
         require(msg.sender == address(liquidPledging));
         var (, , , fromProposedProject , , , ) = liquidPledging.getPledge(pledgeFrom);
         var (, , , , , , toPaymentState ) = liquidPledging.getPledge(pledgeTo);
@@ -93,7 +107,7 @@ contract LPPCampaign is Owned, TokenController {
         uint64 pledgeTo,
         uint64 context,
         uint amount
-    ) external {
+    ) external initialized {
       require(msg.sender == address(liquidPledging));
       var (, , , , , , toPaymentState ) = liquidPledging.getPledge(pledgeTo);
       var (, fromOwner, , , , , ) = liquidPledging.getPledge(pledgeFrom);
@@ -108,20 +122,29 @@ contract LPPCampaign is Owned, TokenController {
       }
     }
 
-    function cancelCampaign() public onlyOwnerOrReviewer {
+    function cancelCampaign() public initialized onlyOwnerOrReviewer {
         require( !isCanceled() );
 
         liquidPledging.cancelProject(idProject);
     }
 
-    function transfer(uint64 idSender, uint64 idPledge, uint amount, uint64 idReceiver) public onlyOwner {
+    function transfer(uint64 idPledge, uint amount, uint64 idReceiver) public initialized onlyOwner {
       require( !isCanceled() );
 
-      liquidPledging.transfer(idSender, idPledge, amount, idReceiver);
+      liquidPledging.transfer(idProject, idPledge, amount, idReceiver);
     }
 
-    function isCanceled() public constant returns (bool) {
+    function isCanceled() public constant initialized returns (bool) {
       return liquidPledging.isProjectCanceled(idProject);
+    }
+
+    // allows the owner to send any tx, similar to a multi-sig
+    // this is necessary b/c the campaign may receive dac/campaign tokens
+    // if they transfer a pledge they own to another dac/campaign.
+    // this allows the owner to participate in governance with the tokens
+    // it holds.
+    function sendTransaction(address destination, uint value, bytes data) public initialized onlyOwner {
+      require(destination.call.value(value)(data));
     }
 
 ////////////////
@@ -131,7 +154,7 @@ contract LPPCampaign is Owned, TokenController {
   /// @notice Called when `_owner` sends ether to the MiniMe Token contract
   /// @param _owner The address that sent the ether to create tokens
   /// @return True if the ether is accepted, false if it throws
-  function proxyPayment(address _owner) public payable returns(bool) {
+  function proxyPayment(address _owner) public payable initialized returns(bool) {
     return false;
   }
 
@@ -141,7 +164,7 @@ contract LPPCampaign is Owned, TokenController {
   /// @param _to The destination of the transfer
   /// @param _amount The amount of the transfer
   /// @return False if the controller does not authorize the transfer
-  function onTransfer(address _from, address _to, uint _amount) public returns(bool) {
+  function onTransfer(address _from, address _to, uint _amount) public initialized returns(bool) {
     return false;
   }
 
@@ -151,7 +174,7 @@ contract LPPCampaign is Owned, TokenController {
   /// @param _spender The spender in the `approve()` call
   /// @param _amount The amount in the `approve()` call
   /// @return False if the controller does not authorize the approval
-  function onApprove(address _owner, address _spender, uint _amount) public returns(bool) {
+  function onApprove(address _owner, address _spender, uint _amount) public initialized returns(bool) {
     return false;
   }
 }

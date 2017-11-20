@@ -4,6 +4,8 @@ const TestRPC = require('ethereumjs-testrpc');
 const chai = require('chai');
 const { Vault, LiquidPledging, LiquidPledgingState } = require('liquidpledging');
 const LPPCampaign = require('../lib/LPPCampaign');
+const LPPCampaignFactory = require('../lib/LPPCampaignFactory');
+const LPPCampaignRuntimeByteCode = require('../build/LPPCampaignFactory.sol').LPPCampaignRuntimeByteCode;
 const MiniMeToken = require('minimetoken/js/minimetoken');
 const MiniMeTokenState = require('minimetoken/js/minimetokenstate');
 const Web3 = require('web3');
@@ -19,6 +21,7 @@ describe('LPPCampaign test', function() {
   let liquidPledging;
   let liquidPledgingState;
   let vault;
+  let factory;
   let campaign;
   let minime;
   let minimeTokenState;
@@ -62,20 +65,26 @@ describe('LPPCampaign test', function() {
 
     liquidPledgingState = new LiquidPledgingState(liquidPledging);
 
-    campaign = await LPPCampaign.new(web3, liquidPledging.$address, 'Campaign 1', 'URL1', 0, reviewer1, 'Campaign 1 Token', 'CPG', { from: campaignOwner1}); // pledgeAdmin #1
+    const codeHash = web3.utils.keccak256(LPPCampaignRuntimeByteCode);
+    await liquidPledging.addValidPlugin(codeHash);
 
-    minime = new MiniMeToken(web3, await campaign.token());
-    minimeTokenState = new MiniMeTokenState(minime);
+    factory = await LPPCampaignFactory.new(web3);
+    await factory.deploy(liquidPledging.$address, 'Campaign 1', 'URL1', 0, reviewer1, 'Campaign 1 Token', 'CPG', { from: campaignOwner1}); // pledgeAdmin #1
 
     const lpState = await liquidPledgingState.getState();
     assert.equal(lpState.admins.length, 2);
     const lpManager = lpState.admins[1];
+
+    campaign = new LPPCampaign(web3, lpManager.plugin);
+
+    minime = new MiniMeToken(web3, await campaign.token());
+    minimeTokenState = new MiniMeTokenState(minime);
+
     assert.equal(lpManager.type, 'Project');
     assert.equal(lpManager.addr, campaign.$address);
     assert.equal(lpManager.name, 'Campaign 1');
     assert.equal(lpManager.commitTime, '0');
     assert.equal(lpManager.canceled, false);
-    assert.equal(lpManager.plugin, campaign.$address);
 
     const cState = await campaign.getState();
     assert.equal(cState.liquidPledging, liquidPledging.$address);
@@ -107,7 +116,7 @@ describe('LPPCampaign test', function() {
 
   it('Should be able to transfer pledge to another project', async function() {
     await liquidPledging.addProject('Project1', 'URL', project1, 0, 0, 0x0, { from: project1, gas: 1000000 }); // pledgeAdmin #3
-    await campaign.transfer(1, 2, 1000, 3, { from: campaignOwner1, gas: 300000 });
+    await campaign.transfer(2, 1000, 3, { from: campaignOwner1, gas: 300000 });
 
     const st = await liquidPledgingState.getState();
     assert.equal(st.pledges[3].amount, 1000);
@@ -152,7 +161,11 @@ describe('LPPCampaign test', function() {
   });
 
   it('Should deploy another campaign', async function() {
-    campaign = await LPPCampaign.new(web3, liquidPledging.$address, 'Campaign 2', 'URL2', 0, reviewer1, 'Campaign 2 Token', 'CPG2', { from: campaignOwner1 }); // pledgeAdmin #4
+    campaign = await factory.deploy(liquidPledging.$address, 'Campaign 2', 'URL2', 0, reviewer1, 'Campaign 2 Token', 'CPG2', { from: campaignOwner1 }); // pledgeAdmin #4
+
+    const nPledgeAdmins = await liquidPledging.numberOfPledgeAdmins();
+    const campaign2Admin = await liquidPledging.getPledgeAdmin(nPledgeAdmins);
+    campaign = new LPPCampaign(web3, campaign2Admin.plugin);
 
     const canceled = await campaign.isCanceled();
     assert.equal(canceled, false);

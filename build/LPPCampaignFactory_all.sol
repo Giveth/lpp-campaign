@@ -1611,7 +1611,7 @@ contract MiniMeTokenFactory {
     }
 }
 
-//File: ./contracts/LPPCampaign.sol
+//File: contracts/LPPCampaign.sol
 pragma solidity ^0.4.13;
 
 
@@ -1791,4 +1791,25 @@ contract LPPCampaign is Owned, TokenController {
   function onApprove(address _owner, address _spender, uint _amount) public initialized returns(bool) {
     return false;
   }
+}
+
+//File: ./contracts/LPPCampaignFactory.sol
+pragma solidity ^0.4.13;
+
+
+
+contract LPPCampaignFactory {
+    function deploy(
+        LiquidPledging liquidPledging,
+        string name,
+        string url,
+        uint64 parentProject,
+        address reviewer,
+        string tokenName,
+        string tokenSymbol
+  ) {
+        LPPCampaign campaign = new LPPCampaign(tokenName, tokenSymbol);
+        campaign.init(liquidPledging, name, url, parentProject, reviewer);
+        campaign.changeOwnership(msg.sender);
+    }
 }
