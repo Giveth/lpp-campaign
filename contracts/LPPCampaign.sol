@@ -29,24 +29,24 @@ contract LPPCampaign is Owned, TokenController {
     event GenerateTokens(address indexed liquidPledging, address addr, uint amount);
 
     function LPPCampaign(
+        LiquidPledging _liquidPledging,
         string tokenName,
         string tokenSymbol
     ) {
       require(msg.sender != tx.origin);
+      liquidPledging = _liquidPledging;
       MiniMeTokenFactory tokenFactory = new MiniMeTokenFactory();
       token = new MiniMeToken(tokenFactory, 0x0, 0, tokenName, 18, tokenSymbol, false);
       initPending = true;
     }
 
     function init(
-        LiquidPledging _liquidPledging,
         string name,
         string url,
         uint64 parentProject,
         address _reviewer
     ) {
         require(initPending);
-        liquidPledging = _liquidPledging;
         idProject = liquidPledging.addProject(name, url, address(this), parentProject, 0, ILiquidPledgingPlugin(this));
         reviewer = _reviewer;
         initPending = false;

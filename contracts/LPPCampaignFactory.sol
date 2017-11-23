@@ -12,8 +12,8 @@ contract LPPCampaignFactory {
         string tokenName,
         string tokenSymbol
   ) {
-        LPPCampaign campaign = new LPPCampaign(tokenName, tokenSymbol);
-        campaign.init(liquidPledging, name, url, parentProject, reviewer);
+        LPPCampaign campaign = new LPPCampaign(liquidPledging, tokenName, tokenSymbol);
+        campaign.init(name, url, parentProject, reviewer);
         campaign.changeOwnership(msg.sender);
     }
 }
