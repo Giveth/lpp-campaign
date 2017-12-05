@@ -1,7 +1,7 @@
 pragma solidity ^0.4.13;
 
 import "liquidpledging/contracts/LiquidPledging.sol";
-import "giveth-common-contracts/contracts/Owned.sol";
+import "giveth-common-contracts/contracts/Escapable.sol";
 import "minimetoken/contracts/MiniMeToken.sol";
 
 /// @title LPPCampaign
@@ -13,7 +13,7 @@ import "minimetoken/contracts/MiniMeToken.sol";
 ///  any pledges this contract owns. The reviewer can only cancel the pledges.
 ///  If this contract is canceled, all pledges will be rolled back to the previous owner
 ///  and will reject all future pledge transfers to the pledgeAdmin represented by this contract
-contract LPPCampaign is Owned, TokenController {
+contract LPPCampaign is Escapable, TokenController {
     uint constant FROM_OWNER = 0;
     uint constant FROM_PROPOSEDPROJECT = 255;
     uint constant TO_OWNER = 256;
@@ -31,8 +31,11 @@ contract LPPCampaign is Owned, TokenController {
     function LPPCampaign(
         LiquidPledging _liquidPledging,
         string tokenName,
-        string tokenSymbol
-    ) {
+        string tokenSymbol,
+        address _escapeHatchCaller,
+        address _escapeHatchDestination
+    ) Escapable(_escapeHatchCaller, _escapeHatchDestination) public
+    {
       require(msg.sender != tx.origin);
       liquidPledging = _liquidPledging;
       MiniMeTokenFactory tokenFactory = new MiniMeTokenFactory();
@@ -86,10 +89,10 @@ contract LPPCampaign is Owned, TokenController {
     ) external initialized returns (uint maxAllowed) {
         require(msg.sender == address(liquidPledging));
         var (, , , fromProposedProject , , , ) = liquidPledging.getPledge(pledgeFrom);
-        var (, , , , , , toPaymentState ) = liquidPledging.getPledge(pledgeTo);
+        var (, , , , , , toPledgeState ) = liquidPledging.getPledge(pledgeTo);
 
         // campaigns can not withdraw funds
-        if ( (context == TO_OWNER) && (toPaymentState != LiquidPledgingBase.PaymentState.Pledged) ) return 0;
+        if ( (context == TO_OWNER) && (toPledgeState != LiquidPledgingBase.PledgeState.Pledged) ) return 0;
 
         // If this campaign is the proposed recipient of delegated funds or funds are being directly
         // transferred to me, ensure that the campaign has not been canceled
@@ -109,12 +112,12 @@ contract LPPCampaign is Owned, TokenController {
         uint amount
     ) external initialized {
       require(msg.sender == address(liquidPledging));
-      var (, , , , , , toPaymentState ) = liquidPledging.getPledge(pledgeTo);
+      var (, , , , , , toPledgeState) = liquidPledging.getPledge(pledgeTo);
       var (, fromOwner, , , , , ) = liquidPledging.getPledge(pledgeFrom);
 
       // only issue tokens when pledge is committed to this campaign
       if ( (context == TO_OWNER) &&
-              (toPaymentState == LiquidPledgingBase.PaymentState.Pledged)) {
+              (toPledgeState == LiquidPledgingBase.PledgeState.Pledged)) {
         var (, fromAddr , , , , , , ) = liquidPledging.getPledgeAdmin(fromOwner);
 
         token.generateTokens(fromAddr, amount);

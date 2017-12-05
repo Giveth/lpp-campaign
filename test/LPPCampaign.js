@@ -2,7 +2,7 @@
 /* eslint-disable no-await-in-loop */
 const TestRPC = require('ethereumjs-testrpc');
 const chai = require('chai');
-const { Vault, LiquidPledging, LiquidPledgingState } = require('liquidpledging');
+const { LPVault, LiquidPledging, LiquidPledgingState } = require('liquidpledging');
 const LPPCampaign = require('../lib/LPPCampaign');
 const LPPCampaignFactory = require('../lib/LPPCampaignFactory');
 const LPPCampaignRuntimeByteCode = require('../build/LPPCampaignFactory.sol').LPPCampaignRuntimeByteCode;
@@ -59,8 +59,8 @@ describe('LPPCampaign test', function() {
   });
 
   it('Should deploy LPPCampaign contract and add project to liquidPledging', async () => {
-    vault = await Vault.new(web3);
-    liquidPledging = await LiquidPledging.new(web3, vault.$address);
+    vault = await LPVault.new(web3, accounts[0], accounts[1]);
+    liquidPledging = await LiquidPledging.new(web3, vault.$address, accounts[0], accounts[1]);
     await vault.setLiquidPledging(liquidPledging.$address);
 
     liquidPledgingState = new LiquidPledgingState(liquidPledging);
@@ -68,8 +68,8 @@ describe('LPPCampaign test', function() {
     const codeHash = web3.utils.keccak256(LPPCampaignRuntimeByteCode);
     await liquidPledging.addValidPlugin(codeHash);
 
-    factory = await LPPCampaignFactory.new(web3);
-    await factory.deploy(liquidPledging.$address, 'Campaign 1', 'URL1', 0, reviewer1, 'Campaign 1 Token', 'CPG', { from: campaignOwner1}); // pledgeAdmin #1
+    factory = await LPPCampaignFactory.new(web3, accounts[0], accounts[1], {gas: 6500000});
+    await factory.deploy(liquidPledging.$address, 'Campaign 1', 'URL1', 0, reviewer1, 'Campaign 1 Token', 'CPG', accounts[0], accounts[1], {from: campaignOwner1}); // pledgeAdmin #1
 
     const lpState = await liquidPledgingState.getState();
     assert.equal(lpState.admins.length, 2);
@@ -161,7 +161,7 @@ describe('LPPCampaign test', function() {
   });
 
   it('Should deploy another campaign', async function() {
-    campaign = await factory.deploy(liquidPledging.$address, 'Campaign 2', 'URL2', 0, reviewer1, 'Campaign 2 Token', 'CPG2', { from: campaignOwner1 }); // pledgeAdmin #4
+    campaign = await factory.deploy(liquidPledging.$address, 'Campaign 2', 'URL2', 0, reviewer1, 'Campaign 2 Token', 'CPG2', accounts[0], accounts[1], { from: campaignOwner1 }); // pledgeAdmin #4
 
     const nPledgeAdmins = await liquidPledging.numberOfPledgeAdmins();
     const campaign2Admin = await liquidPledging.getPledgeAdmin(nPledgeAdmins);
