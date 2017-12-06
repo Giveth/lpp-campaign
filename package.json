@@ -1,6 +1,6 @@
 {
   "name": "lpp-campaign",
-  "version": "0.0.13",
+  "version": "0.0.14",
   "description": "Simple campaign plugin with reviewer for liquidpledging.",
   "main": "index.js",
   "directories": {
