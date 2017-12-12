@@ -2,6 +2,7 @@ pragma solidity ^0.4.13;
 
 import "./LPPCampaign.sol";
 
+
 contract LPPCampaignFactory is Escapable {
 
     function LPPCampaignFactory(address _escapeHatchCaller, address _escapeHatchDestination)
@@ -21,7 +22,12 @@ contract LPPCampaignFactory is Escapable {
         address escapeHatchDestination
   ) {
         LPPCampaign campaign = new LPPCampaign(liquidPledging, tokenName, tokenSymbol, escapeHatchCaller, escapeHatchDestination);
-        campaign.init(name, url, parentProject, reviewer);
+        campaign.init(
+            name,
+			url,
+			parentProject,
+			reviewer
+        );
         campaign.changeOwnership(msg.sender);
     }
 }

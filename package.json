@@ -10,6 +10,7 @@
     "test": "[ ! -d build ] && npm run sol-compile; mocha --harmony",
     "sol-compile": "solcpiler",
     "js-compile": "babel --source-maps -d lib/ js/",
+	"lint": "solium --dir contracts",
     "compile": "npm run sol-compile; npm run js-compile",
     "prepublish": "npm run compile"
   },
@@ -44,6 +45,7 @@
     "ethereumjs-testrpc": "git://github.com/perissology/testrpc.git#81216dbc",
     "lerna": "^2.2.0",
     "solcpiler": "0.0.10",
+    "solium": "^1.0.9",
     "web3": "^1.0.0-beta.24"
   }
 }
