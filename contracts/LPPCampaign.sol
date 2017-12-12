@@ -4,6 +4,7 @@ import "liquidpledging/contracts/LiquidPledging.sol";
 import "giveth-common-contracts/contracts/Escapable.sol";
 import "minimetoken/contracts/MiniMeToken.sol";
 
+
 /// @title LPPCampaign
 /// @author perissology <perissology@protonmail.com>
 /// @notice The LPPCampaign contract is a plugin contract for liquidPledging,
@@ -36,11 +37,11 @@ contract LPPCampaign is Escapable, TokenController {
         address _escapeHatchDestination
     ) Escapable(_escapeHatchCaller, _escapeHatchDestination) public
     {
-      require(msg.sender != tx.origin);
-      liquidPledging = _liquidPledging;
-      MiniMeTokenFactory tokenFactory = new MiniMeTokenFactory();
-      token = new MiniMeToken(tokenFactory, 0x0, 0, tokenName, 18, tokenSymbol, false);
-      initPending = true;
+        require(msg.sender != tx.origin);
+        liquidPledging = _liquidPledging;
+        MiniMeTokenFactory tokenFactory = new MiniMeTokenFactory();
+        token = new MiniMeToken(tokenFactory, 0x0, 0, tokenName, 18, tokenSymbol, false);
+        initPending = true;
     }
 
     function init(
@@ -50,14 +51,21 @@ contract LPPCampaign is Escapable, TokenController {
         address _reviewer
     ) {
         require(initPending);
-        idProject = liquidPledging.addProject(name, url, address(this), parentProject, 0, ILiquidPledgingPlugin(this));
+        idProject = liquidPledging.addProject(
+		    name, 
+			url, 
+			address(this),
+			parentProject,
+			0,
+			ILiquidPledgingPlugin(this)
+        );
         reviewer = _reviewer;
         initPending = false;
     }
 
     modifier initialized() {
-      require(!initPending);
-      _;
+        require(!initPending);
+        _;
     }
 
     modifier onlyReviewer() {
@@ -66,7 +74,7 @@ contract LPPCampaign is Escapable, TokenController {
     }
 
     modifier onlyOwnerOrReviewer() {
-        require( msg.sender == owner || msg.sender == reviewer );
+        require(msg.sender == owner || msg.sender == reviewer);
         _;
     }
 
@@ -86,20 +94,25 @@ contract LPPCampaign is Escapable, TokenController {
         uint64 pledgeTo,
         uint64 context,
         uint amount
-    ) external initialized returns (uint maxAllowed) {
+    ) external initialized returns (uint maxAllowed) 
+	{
         require(msg.sender == address(liquidPledging));
         var (, , , fromProposedProject , , , ) = liquidPledging.getPledge(pledgeFrom);
         var (, , , , , , toPledgeState ) = liquidPledging.getPledge(pledgeTo);
 
         // campaigns can not withdraw funds
-        if ( (context == TO_OWNER) && (toPledgeState != LiquidPledgingBase.PledgeState.Pledged) ) return 0;
+        if ( (context == TO_OWNER) && (toPledgeState != LiquidPledgingBase.PledgeState.Pledged) ) {
+            return 0;
+		}
 
         // If this campaign is the proposed recipient of delegated funds or funds are being directly
         // transferred to me, ensure that the campaign has not been canceled
-        if ( (context == TO_PROPOSEDPROJECT)
-            || ( (context == TO_OWNER) && (fromProposedProject != idProject) ))
+        if ( (context == TO_PROPOSEDPROJECT) ||
+            ( (context == TO_OWNER) && (fromProposedProject != idProject) ))
         {
-            if (isCanceled()) return 0;
+            if (isCanceled()) {
+                return 0;
+			}
         }
         return amount;
     }
@@ -110,35 +123,41 @@ contract LPPCampaign is Escapable, TokenController {
         uint64 pledgeTo,
         uint64 context,
         uint amount
-    ) external initialized {
-      require(msg.sender == address(liquidPledging));
-      var (, , , , , , toPledgeState) = liquidPledging.getPledge(pledgeTo);
-      var (, fromOwner, , , , , ) = liquidPledging.getPledge(pledgeFrom);
+    ) external initialized 
+	{
+        require(msg.sender == address(liquidPledging));
+        var (, , , , , , toPledgeState) = liquidPledging.getPledge(pledgeTo);
+        var (, fromOwner, , , , , ) = liquidPledging.getPledge(pledgeFrom);
 
-      // only issue tokens when pledge is committed to this campaign
-      if ( (context == TO_OWNER) &&
-              (toPledgeState == LiquidPledgingBase.PledgeState.Pledged)) {
-        var (, fromAddr , , , , , , ) = liquidPledging.getPledgeAdmin(fromOwner);
+        // only issue tokens when pledge is committed to this campaign
+        if ( (context == TO_OWNER) &&
+            (toPledgeState == LiquidPledgingBase.PledgeState.Pledged)) {
+            var (, fromAddr , , , , , , ) = liquidPledging.getPledgeAdmin(fromOwner);
 
-        token.generateTokens(fromAddr, amount);
-        GenerateTokens(liquidPledging, fromAddr, amount);
+            token.generateTokens(fromAddr, amount);
+            GenerateTokens(liquidPledging, fromAddr, amount);
       }
     }
 
     function cancelCampaign() public initialized onlyOwnerOrReviewer {
-        require( !isCanceled() );
+        require(!isCanceled());
 
         liquidPledging.cancelProject(idProject);
     }
 
     function transfer(uint64 idPledge, uint amount, uint64 idReceiver) public initialized onlyOwner {
-      require( !isCanceled() );
+        require(!isCanceled());
 
-      liquidPledging.transfer(idProject, idPledge, amount, idReceiver);
+        liquidPledging.transfer(
+		    idProject, 
+			idPledge, 
+			amount, 
+			idReceiver
+        );
     }
 
     function isCanceled() public constant initialized returns (bool) {
-      return liquidPledging.isProjectCanceled(idProject);
+        return liquidPledging.isProjectCanceled(idProject);
     }
 
     // allows the owner to send any tx, similar to a multi-sig
@@ -147,7 +166,7 @@ contract LPPCampaign is Escapable, TokenController {
     // this allows the owner to participate in governance with the tokens
     // it holds.
     function sendTransaction(address destination, uint value, bytes data) public initialized onlyOwner {
-      require(destination.call.value(value)(data));
+        require(destination.call.value(value)(data));
     }
 
 ////////////////
@@ -157,9 +176,9 @@ contract LPPCampaign is Escapable, TokenController {
   /// @notice Called when `_owner` sends ether to the MiniMe Token contract
   /// @param _owner The address that sent the ether to create tokens
   /// @return True if the ether is accepted, false if it throws
-  function proxyPayment(address _owner) public payable initialized returns(bool) {
-    return false;
-  }
+    function proxyPayment(address _owner) public payable initialized returns(bool) {
+        return false;
+    }
 
   /// @notice Notifies the controller about a token transfer allowing the
   ///  controller to react if desired
@@ -167,9 +186,9 @@ contract LPPCampaign is Escapable, TokenController {
   /// @param _to The destination of the transfer
   /// @param _amount The amount of the transfer
   /// @return False if the controller does not authorize the transfer
-  function onTransfer(address _from, address _to, uint _amount) public initialized returns(bool) {
-    return false;
-  }
+    function onTransfer(address _from, address _to, uint _amount) public initialized returns(bool) {
+        return false;
+    }
 
   /// @notice Notifies the controller about an approval allowing the
   ///  controller to react if desired
@@ -177,7 +196,7 @@ contract LPPCampaign is Escapable, TokenController {
   /// @param _spender The spender in the `approve()` call
   /// @param _amount The amount in the `approve()` call
   /// @return False if the controller does not authorize the approval
-  function onApprove(address _owner, address _spender, uint _amount) public initialized returns(bool) {
-    return false;
-  }
+    function onApprove(address _owner, address _spender, uint _amount) public initialized returns(bool) {
+        return false;
+    }
 }
