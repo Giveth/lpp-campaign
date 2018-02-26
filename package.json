@@ -8,9 +8,9 @@
   },
   "scripts": {
     "test": "[ ! -d build ] && npm run sol-compile; mocha --harmony",
-    "sol-compile": "solcpiler",
+    "sol-compile": "solcpiler --solc-version v0.4.18+commit.9cf6e910",
     "js-compile": "babel --source-maps -d lib/ js/",
-	"lint": "solium --dir contracts",
+    "lint": "solium --dir contracts",
     "compile": "npm run sol-compile; npm run js-compile",
     "prepublish": "npm run compile"
   },
@@ -32,19 +32,19 @@
   },
   "homepage": "https://github.com/Giveth/lpp-campaign#readme",
   "dependencies": {
+    "@aragon/os": "3.0.4",
     "chai": "^4.1.2",
-    "eth-contract-class": "0.0.6",
     "giveth-common-contracts": "0.4.0",
-    "liquidpledging": "git://github.com/giveth/liquidpledging.git#28313ee",
-    "minimetoken": "^0.2.0"
+    "liquidpledging": "0.0.10",
+    "minimetoken": "0.2.0"
   },
   "devDependencies": {
     "babel-cli": "^6.26.0",
     "babel-preset-env": "^1.6.0",
     "eslint": "^4.3.0",
-    "ethereumjs-testrpc": "git://github.com/perissology/testrpc.git#81216dbc",
+    "ganache-cli": "^7.0.0-beta.0",
     "lerna": "^2.2.0",
-    "solcpiler": "0.0.10",
+    "solcpiler": "^0.0.15",
     "solium": "^1.0.9",
     "web3": "^1.0.0-beta.24"
   }
