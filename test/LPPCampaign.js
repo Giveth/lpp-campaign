@@ -215,7 +215,7 @@ describe('LPPCampaign test', function () {
 
     const params = [
       // id: 204 (logic) op: OR(9) value: 2 or 1
-      '0xcc09000000000000000000000000000000000000000000000000000200000001',
+      // '0xcc09000000000000000000000000000000000000000000000000000200000001',
       // id: 0 (logic) op: EQ(1) value: token2.$address
       `0x000100000000000000000000${token2.$address}`
     ];
