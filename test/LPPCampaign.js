@@ -22,6 +22,7 @@ describe('LPPCampaign test', function () {
   let factory;
   let campaign;
   let campaignState;
+  let acl;
   let minime;
   let minimeTokenState;
   let giver1;
@@ -195,6 +196,30 @@ describe('LPPCampaign test', function () {
     assert.equal(canceled, false);
   });
 
+  it('Should reject transfer for unapproved token', async function () {
+    const token2 = await StandardTokenTest.new(web3);
+    await token2.mint(giver1, web3.utils.toWei('1000'));
+    await token2.approve(liquidPledging.$address, "0xFFFFFFFFFFFFFFFF", { from: giver1 });
+
+    const params = [
+      // id: 204 (logic) op: OR(9) value: 2 or 1
+      // '0xcc09000000000000000000000000000000000000000000000000000200000001',
+      // id: 0 (arg 0) op: EQ(1) value: token2.$address
+      `0x000100000000000000000000${token2.$address.slice(2)}`
+    ];
+    await campaign.setTransferPermissions(params, { from: campaignOwner1, $extraGas: 100000 });
+
+    await assertFail(
+      liquidPledging.donate(2, 1, giver1Token.$address, 1000, { from: giver1, gas: 4000000 })
+    );
+
+    await liquidPledging.donate(2, 4, token2.$address, 1000, { from: giver1, $extraGas: 100000});
+
+    const st = await liquidPledgingState.getState();
+    assert.equal(st.pledges[6].amount, 1000);
+    assert.equal(st.pledges[6].owner, 4);
+  });
+
   it('Random should not be able to cancel campaign', async function () {
     await assertFail(campaign.cancelCampaign({ from: accounts[9], gas: 6700000 }));
   });
@@ -205,26 +230,4 @@ describe('LPPCampaign test', function () {
     const canceled = await campaign.isCanceled();
     assert.equal(canceled, true);
   });
-
-  it('Should reject transfer for unapproved token', async function () {
-    return;
-
-    const token2 = await contracts.StandardToken.new(web3);
-    await token2.mint(giver1, web3.utils.toWei('1000'));
-    await token2.approve(liquidPledging.$address, "0xFFFFFFFFFFFFFFFF", { from: giver1 });
-
-    const params = [
-      // id: 204 (logic) op: OR(9) value: 2 or 1
-      // '0xcc09000000000000000000000000000000000000000000000000000200000001',
-      // id: 0 (logic) op: EQ(1) value: token2.$address
-      `0x000100000000000000000000${token2.$address}`
-    ];
-    await campaign.setTransferPermissions(params);
-
-    await assertFail(
-      liquidPledging.donate(2, 1, giver1Token.$address, 1000, { from: giver1, gas: 4000000 })
-    );
-
-    await liquidPledging.donate(2, 1, token2.$address, 1000, { from: giver1, gas: 4000000 })
-  })
 });
