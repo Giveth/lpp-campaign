@@ -49,7 +49,7 @@ contract LPPCampaignFactory is LPConstants, Escapable, AppProxyFactory {
 
         // TODO: could make MiniMeToken an AragonApp to save gas by deploying a proxy
         address token = new MiniMeToken(tokenFactory, 0x0, 0, tokenName, 18, tokenSymbol, false);
-        LPPCampaign campaign = LPPCampaign(newAppProxy(kernel, CAMPAIGN_APP));
+        LPPCampaign campaign = LPPCampaign(newAppProxy(kernel, CAMPAIGN_APP_ID));
 
         LiquidPledging(liquidPledging).addValidPluginInstance(address(campaign));
 

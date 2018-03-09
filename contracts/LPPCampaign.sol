@@ -5,6 +5,7 @@ import "giveth-liquidpledging/contracts/EscapableApp.sol";
 import "giveth-common-contracts/contracts/Escapable.sol";
 import "minimetoken/contracts/MiniMeToken.sol";
 import "@aragon/os/contracts/acl/ACL.sol";
+import "@aragon/os/contracts/kernel/KernelProxy.sol";
 
 
 /// @title LPPCampaign

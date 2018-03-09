@@ -44,7 +44,7 @@
     "eslint": "^4.3.0",
     "ganache-cli": "^7.0.0-beta.0",
     "lerna": "^2.2.0",
-    "solcpiler": "^0.0.15",
+    "solcpiler": "https://github.com/perissology/solcpiler.git#b60ac51b",
     "solium": "^1.0.9",
     "web3": "^1.0.0-beta.24"
   }
