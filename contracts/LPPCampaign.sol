@@ -173,7 +173,7 @@ contract LPPCampaign is EscapableApp, TokenController {
     // this allows the ADMIN to use the ACL permissions to control under what circumstances a transfer can be
     // made to this PledgeAdmin. Some examples are whitelisting tokens and/or who can donate
     function setTransferPermissions(uint[] params) external auth(ADMIN_ROLE) {
-        // hack until they fix thier shit regarding the require(!hasPermission) when setting another permission
+        // hack until they fix their shit regarding the require(!hasPermission) when setting another permission
         ACL(kernel.acl()).revokePermission(address(liquidPledging), address(this), ACCEPT_TRANSFER_ROLE);
         ACL(kernel.acl()).grantPermissionP(address(liquidPledging), address(this), ACCEPT_TRANSFER_ROLE, params);
     }

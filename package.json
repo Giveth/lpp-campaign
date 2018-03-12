@@ -35,7 +35,7 @@
     "@aragon/os": "3.0.4",
     "chai": "^4.1.2",
     "giveth-common-contracts": "0.4.0",
-    "liquidpledging": "0.0.10",
+    "liquidpledging": "https://github.com/giveth/liquidpledging.git#c5e874e",
     "minimetoken": "0.2.0"
   },
   "devDependencies": {
