@@ -6,7 +6,7 @@ import "@aragon/os/contracts/factory/AppProxyFactory.sol";
 import "@aragon/os/contracts/kernel/Kernel.sol";
 import "giveth-liquidpledging/contracts/LiquidPledging.sol";
 import "giveth-liquidpledging/contracts/LPConstants.sol";
-
+import "giveth-common-contracts/contracts/Escapable.sol";
 
 contract LPPCampaignFactory is LPConstants, Escapable, AppProxyFactory {
     Kernel public kernel;

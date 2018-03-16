@@ -1,8 +1,7 @@
-pragma solidity ^0.4.13;
+pragma solidity ^0.4.18;
 
 import "giveth-liquidpledging/contracts/LiquidPledging.sol";
 import "giveth-liquidpledging/contracts/EscapableApp.sol";
-import "giveth-common-contracts/contracts/Escapable.sol";
 import "minimetoken/contracts/MiniMeToken.sol";
 import "@aragon/os/contracts/acl/ACL.sol";
 import "@aragon/os/contracts/kernel/KernelProxy.sol";
@@ -58,6 +57,7 @@ contract LPPCampaign is EscapableApp, TokenController {
     {
         super.initialize(_escapeHatchDestination);
         require(_liquidPledging != 0);
+        require(_token != 0);
         require(_reviewer != 0);
 
         liquidPledging = LiquidPledging(_liquidPledging);
