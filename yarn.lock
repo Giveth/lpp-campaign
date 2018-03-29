@@ -2499,9 +2499,9 @@ giveth-common-contracts@0.4.0, giveth-common-contracts@^0.4.0:
     jsonfile "^3.0.1"
     solium "^0.5.5"
 
-"giveth-liquidpledging@https://github.com/giveth/liquidpledging.git#aragon":
-  version "0.0.10"
-  resolved "https://github.com/giveth/liquidpledging.git#71e2b159e147c93ec36928f2e5117c664ad84d8f"
+giveth-liquidpledging@0.1.0:
+  version "0.1.0"
+  resolved "https://registry.yarnpkg.com/giveth-liquidpledging/-/giveth-liquidpledging-0.1.0.tgz#a6c554a255692a292f2b05383b5949cd73c84be2"
   dependencies:
     "@aragon/os" "3.0.1"
     async "^2.4.0"
