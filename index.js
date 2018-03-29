@@ -1,3 +1,3 @@
-exports.LPPCampaign = require('./lib/LPPCampaign');
-exports.LPPCampaignFactory = require('./lib/LPPCampaignFactory');
-exports.LPPCampaignRuntimeByteCode = require('./build/LPPCampaignFactory.sol').LPPCampaignRuntimeByteCode;
+const contracts = require('./build/contracts');
+exports.LPPCampaign = contracts.LPPCampaign;
+exports.LPPCampaignFactory = contracts.LPPCampaignFactory;

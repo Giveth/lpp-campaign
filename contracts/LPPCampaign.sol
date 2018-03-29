@@ -39,8 +39,7 @@ contract LPPCampaign is EscapableApp, TokenController {
 
     event GenerateTokens(address indexed liquidPledging, address addr, uint amount);
 
-    function LPPCampaign(address _escapeHatchDestination) EscapableApp(_escapeHatchDestination) public {
-    }
+    function LPPCampaign(address _escapeHatchDestination) EscapableApp(_escapeHatchDestination) public {}
 
     function initialize(address _escapeHatchDestination) onlyInit public {
         require(false); // overload the EscapableApp
