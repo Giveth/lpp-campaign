@@ -21,7 +21,6 @@ import "@aragon/os/contracts/kernel/KernelProxy.sol";
 ///  and will reject all future pledge transfers to the pledgeAdmin represented by this contract
 contract LPPCampaign is EscapableApp, TokenController {
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
-    bytes32 public constant TRANSFER_ROLE = keccak256("TRANSFER_ROLE");
 
     // used internally to control what transfers to accept
     bytes32 public constant ACCEPT_TRANSFER_ROLE = keccak256("ACCEPT_TRANSFER_ROLE");
@@ -148,7 +147,7 @@ contract LPPCampaign is EscapableApp, TokenController {
         liquidPledging.cancelProject(idProject);
     }
 
-    function transfer(uint64 idPledge, uint amount, uint64 idReceiver) external authP(TRANSFER_ROLE, arr(amount, idReceiver)) {
+    function transfer(uint64 idPledge, uint amount, uint64 idReceiver) external authP(ADMIN_ROLE, arr(amount, idReceiver)) {
         require(!isCanceled());
 
         liquidPledging.transfer(
@@ -178,6 +177,21 @@ contract LPPCampaign is EscapableApp, TokenController {
 
     function isCanceled() public view returns (bool) {
         return liquidPledging.isProjectCanceled(idProject);
+    }
+
+    function update(
+        string newName,
+        string newUrl,
+        uint64 newCommitTime
+    ) public auth(ADMIN_ROLE)
+    {
+        liquidPledging.updateProject(
+            idProject,
+            address(this),
+            newName,
+            newUrl,
+            newCommitTime
+        );
     }
 
 ////////////////

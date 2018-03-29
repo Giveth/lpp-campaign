@@ -220,6 +220,16 @@ describe('LPPCampaign test', function () {
     assert.equal(st.pledges[6].owner, 4);
   });
 
+  it('Should update project', async function () {
+    await campaign.update('new name', 'new url', 1010, { from: campaignOwner1, $extraGas: 100000 });
+
+    const c = await liquidPledging.getPledgeAdmin(4);
+    assert.equal(c.name, 'new name');
+    assert.equal(c.addr, campaign.$address);
+    assert.equal(c.url, 'new url');
+    assert.equal(c.commitTime, 1010);
+  });
+
   it('Random should not be able to cancel campaign', async function () {
     await assertFail(campaign.cancelCampaign({ from: accounts[9], gas: 6700000 }));
   });
@@ -230,4 +240,5 @@ describe('LPPCampaign test', function () {
     const canceled = await campaign.isCanceled();
     assert.equal(canceled, true);
   });
+
 });

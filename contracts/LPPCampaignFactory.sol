@@ -71,14 +71,12 @@ contract LPPCampaignFactory is LPConstants, Escapable, AppProxyFactory {
 
         bytes32 hatchCallerRole = campaign.ESCAPE_HATCH_CALLER_ROLE();
         bytes32 adminRole = campaign.ADMIN_ROLE();
-        bytes32 transferRole = campaign.TRANSFER_ROLE();
         bytes32 acceptTransferRole = campaign.ACCEPT_TRANSFER_ROLE();
 
         acl.createPermission(liquidPledging, address(campaign), acceptTransferRole, address(campaign));
         // this permission is managed by the escapeHatchCaller
         acl.createPermission(escapeHatchCaller, address(campaign), hatchCallerRole, escapeHatchCaller);
-        // these 2 permissions are managed by msg.sender
+        // this permission is managed by msg.sender
         acl.createPermission(msg.sender, address(campaign), adminRole, msg.sender);
-        acl.createPermission(msg.sender, address(campaign), transferRole, msg.sender);
     }
 }
