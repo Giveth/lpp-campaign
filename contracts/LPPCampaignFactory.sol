@@ -56,7 +56,7 @@ contract LPPCampaignFactory is LPConstants, Escapable, AppProxyFactory {
         campaign.initialize(liquidPledging, token, name, url, parentProject, reviewer, escapeHatchDestination);
         MiniMeToken(token).changeController(address(campaign));
 
-        _setPermissions(campaign, liquidPledging, reviewer, escapeHatchCaller);
+        _setPermissions(campaign, liquidPledging, escapeHatchCaller);
 
         DeployCampaign(address(campaign));
     }
@@ -64,19 +64,16 @@ contract LPPCampaignFactory is LPConstants, Escapable, AppProxyFactory {
     function _setPermissions(
         LPPCampaign campaign,
         address liquidPledging,
-        address reviewer,
         address escapeHatchCaller
     ) internal
     {
         ACL acl = ACL(kernel.acl());
 
         bytes32 hatchCallerRole = campaign.ESCAPE_HATCH_CALLER_ROLE();
-        bytes32 reviewerRole = campaign.REVIEWER_ROLE();
         bytes32 adminRole = campaign.ADMIN_ROLE();
         bytes32 transferRole = campaign.TRANSFER_ROLE();
         bytes32 acceptTransferRole = campaign.ACCEPT_TRANSFER_ROLE();
 
-        acl.createPermission(reviewer, address(campaign), reviewerRole, address(campaign));
         acl.createPermission(liquidPledging, address(campaign), acceptTransferRole, address(campaign));
         // this permission is managed by the escapeHatchCaller
         acl.createPermission(escapeHatchCaller, address(campaign), hatchCallerRole, escapeHatchCaller);

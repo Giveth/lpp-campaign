@@ -60,8 +60,8 @@ describe('LPPCampaign test', function () {
   });
 
   it('Should deploy LPPCampaign contract and add project to liquidPledging', async () => {
-    const baseVault = await LPVault.new(web3);
-    const baseLP = await LiquidPledging.new(web3);
+    const baseVault = await LPVault.new(web3, accounts[0]);
+    const baseLP = await LiquidPledging.new(web3, accounts[0]);
     const lpFactory = await LPFactory.new(web3, baseVault.$address, baseLP.$address);
 
     const r = await lpFactory.newLP(accounts[0], accounts[1], { $extraGas: 200000 });
@@ -89,7 +89,7 @@ describe('LPPCampaign test', function () {
     await acl.grantPermission(factory.$address, acl.$address, await acl.CREATE_PERMISSIONS_ROLE(), { $extraGas: 200000 });
     await acl.grantPermission(factory.$address, liquidPledging.$address, await liquidPledging.PLUGIN_MANAGER_ROLE(), { $extraGas: 200000 });
 
-    const campaignApp = await contracts.LPPCampaign.new(web3);
+    const campaignApp = await contracts.LPPCampaign.new(web3, accounts[0]);
     await kernel.setApp(await kernel.APP_BASES_NAMESPACE(), await factory.CAMPAIGN_APP_ID(), campaignApp.$address, { $extraGas: 200000 });
 
     await factory.newCampaign('Campaign 1', 'URL1', 0, reviewer1, 'Campaign 1 Token', 'CPG', accounts[0], accounts[1], { from: campaignOwner1 });

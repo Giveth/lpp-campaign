@@ -21,7 +21,6 @@ import "@aragon/os/contracts/kernel/KernelProxy.sol";
 ///  and will reject all future pledge transfers to the pledgeAdmin represented by this contract
 contract LPPCampaign is EscapableApp, TokenController {
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
-    bytes32 public constant REVIEWER_ROLE = keccak256("REVIEWER_ROLE");
     bytes32 public constant TRANSFER_ROLE = keccak256("TRANSFER_ROLE");
 
     // used internally to control what transfers to accept
@@ -39,6 +38,9 @@ contract LPPCampaign is EscapableApp, TokenController {
     address public newReviewer;
 
     event GenerateTokens(address indexed liquidPledging, address addr, uint amount);
+
+    function LPPCampaign(address _escapeHatchDestination) EscapableApp(_escapeHatchDestination) public {
+    }
 
     function initialize(address _escapeHatchDestination) onlyInit public {
         require(false); // overload the EscapableApp
@@ -72,21 +74,6 @@ contract LPPCampaign is EscapableApp, TokenController {
         );
         reviewer = _reviewer;
         campaignToken = MiniMeToken(_token);
-    }
-
-    function changeReviewer(address _newReviewer) external auth(REVIEWER_ROLE) {
-        newReviewer = _newReviewer;
-    }
-
-    function acceptNewReviewer() external {
-        require(newReviewer == msg.sender);
-
-        ACL acl = ACL(kernel.acl());
-        acl.revokePermission(reviewer, address(this), REVIEWER_ROLE);
-        acl.grantPermission(newReviewer, address(this), REVIEWER_ROLE);
-
-        reviewer = newReviewer;
-        newReviewer = 0;
     }
 
     function beforeTransfer(
@@ -143,8 +130,20 @@ contract LPPCampaign is EscapableApp, TokenController {
       }
     }
 
+    function changeReviewer(address _newReviewer) external {
+        require(msg.sender == reviewer);
+        newReviewer = _newReviewer;
+    }
+
+    function acceptNewReviewer() external {
+        require(newReviewer == msg.sender);
+
+        reviewer = newReviewer;
+        newReviewer = 0;
+    }
+
     function cancelCampaign() external {
-        require(_hasRole(ADMIN_ROLE) || _hasRole(REVIEWER_ROLE));
+        require(msg.sender == reviewer || canPerform(msg.sender, ADMIN_ROLE, new uint[](0)));
         require(!isCanceled());
 
         liquidPledging.cancelProject(idProject);
@@ -155,9 +154,9 @@ contract LPPCampaign is EscapableApp, TokenController {
 
         liquidPledging.transfer(
 		        idProject,
-			      idPledge,
-			      amount,
-			      idReceiver
+			    idPledge,
+			    amount,
+			    idReceiver
         );
     }
 
@@ -173,17 +172,13 @@ contract LPPCampaign is EscapableApp, TokenController {
     // this allows the ADMIN to use the ACL permissions to control under what circumstances a transfer can be
     // made to this PledgeAdmin. Some examples are whitelisting tokens and/or who can donate
     function setTransferPermissions(uint[] params) external auth(ADMIN_ROLE) {
-        // hack until they fix their shit regarding the require(!hasPermission) when setting another permission
+        // hack until they fix the ACL regarding the require(!hasPermission) when setting another permission
         ACL(kernel.acl()).revokePermission(address(liquidPledging), address(this), ACCEPT_TRANSFER_ROLE);
         ACL(kernel.acl()).grantPermissionP(address(liquidPledging), address(this), ACCEPT_TRANSFER_ROLE, params);
     }
 
-    function isCanceled() public constant returns (bool) {
+    function isCanceled() public view returns (bool) {
         return liquidPledging.isProjectCanceled(idProject);
-    }
-
-    function _hasRole(bytes32 role) internal returns(bool) {
-      return canPerform(msg.sender, role, new uint[](0));
     }
 
 ////////////////
