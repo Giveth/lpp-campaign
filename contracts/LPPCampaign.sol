@@ -171,6 +171,7 @@ contract LPPCampaign is EscapableApp, TokenController {
     // made to this PledgeAdmin. Some examples are whitelisting tokens and/or who can donate
     function setTransferPermissions(uint[] params) external auth(ADMIN_ROLE) {
         // hack until they fix the ACL regarding the require(!hasPermission) when setting another permission
+        // TODO: update to latest aragonOS as this is fixed
         ACL(kernel.acl()).revokePermission(address(liquidPledging), address(this), ACCEPT_TRANSFER_ROLE);
         ACL(kernel.acl()).grantPermissionP(address(liquidPledging), address(this), ACCEPT_TRANSFER_ROLE, params);
     }
