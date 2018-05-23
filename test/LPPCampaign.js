@@ -1,17 +1,22 @@
 /* eslint-env mocha */
 /* eslint-disable no-await-in-loop */
-const TestRPC = require('ethereumjs-testrpc');
-const chai = require('chai');
-const { LPVault, LiquidPledging, LiquidPledgingState } = require('liquidpledging');
-const LPPCampaign = require('../lib/LPPCampaign');
-const LPPCampaignFactory = require('../lib/LPPCampaignFactory');
-const LPPCampaignRuntimeByteCode = require('../build/LPPCampaignFactory.sol').LPPCampaignRuntimeByteCode;
-const MiniMeToken = require('minimetoken/js/minimetoken');
-const MiniMeTokenState = require('minimetoken/js/minimetokenstate');
+const TestRPC = require('ganache-cli');
+const { LPPCampaign, LPPCampaignFactory } = require('../index');
+const {
+  Kernel,
+  ACL,
+  LPVault,
+  LiquidPledging,
+  LPFactory,
+  test,
+  LiquidPledgingState,
+} = require('giveth-liquidpledging');
+const LPPCampaignState = require('../lib/LPPCampaignState');
+const { MiniMeToken, MiniMeTokenFactory, MiniMeTokenState } = require('minimetoken');
 const Web3 = require('web3');
+const { assert } = require('chai');
 
-const assert = chai.assert;
-const assertFail = require('./helpers/assertFail');
+const { StandardTokenTest, assertFail } = test;
 
 describe('LPPCampaign test', function() {
   this.timeout(0);
@@ -23,6 +28,8 @@ describe('LPPCampaign test', function() {
   let vault;
   let factory;
   let campaign;
+  let campaignState;
+  let acl;
   let minime;
   let minimeTokenState;
   let giver1;
@@ -32,17 +39,18 @@ describe('LPPCampaign test', function() {
   let reviewer1;
   let reviewer2;
   let testrpc;
+  let giver1Token;
 
   before(async () => {
     testrpc = TestRPC.server({
       ws: true,
-      gasLimit: 6500000,
+      gasLimit: 9700000,
       total_accounts: 10,
     });
 
-    testrpc.listen(8546, '127.0.0.1', (err) => {});
+    testrpc.listen(8545, '127.0.0.1', err => {});
 
-    web3 = new Web3('ws://localhost:8546');
+    web3 = new Web3('http://localhost:8545');
     accounts = await web3.eth.getAccounts();
 
     giver1 = accounts[1];
@@ -53,31 +61,96 @@ describe('LPPCampaign test', function() {
     giver2 = accounts[6];
   });
 
-  after((done) => {
+  after(done => {
     testrpc.close();
     done();
+    process.exit();
   });
 
   it('Should deploy LPPCampaign contract and add project to liquidPledging', async () => {
-    vault = await LPVault.new(web3, accounts[0], accounts[1]);
-    liquidPledging = await LiquidPledging.new(web3, vault.$address, accounts[0], accounts[1]);
-    await vault.setLiquidPledging(liquidPledging.$address);
+    const baseVault = await LPVault.new(web3, accounts[0]);
+    const baseLP = await LiquidPledging.new(web3, accounts[0]);
+    const lpFactory = await LPFactory.new(web3, baseVault.$address, baseLP.$address);
+
+    const r = await lpFactory.newLP(accounts[0], accounts[1], { $extraGas: 200000 });
+
+    const vaultAddress = r.events.DeployVault.returnValues.vault;
+    vault = new LPVault(web3, vaultAddress);
+
+    const lpAddress = r.events.DeployLiquidPledging.returnValues.liquidPledging;
+    liquidPledging = new LiquidPledging(web3, lpAddress);
 
     liquidPledgingState = new LiquidPledgingState(liquidPledging);
 
-    const codeHash = web3.utils.keccak256(LPPCampaignRuntimeByteCode);
-    await liquidPledging.addValidPlugin(codeHash);
+    // set permissions
+    const kernel = new Kernel(web3, await liquidPledging.kernel());
+    acl = new ACL(web3, await kernel.acl());
+    await acl.createPermission(
+      accounts[0],
+      vault.$address,
+      await vault.CANCEL_PAYMENT_ROLE(),
+      accounts[0],
+      { $extraGas: 200000 },
+    );
+    await acl.createPermission(
+      accounts[0],
+      vault.$address,
+      await vault.CONFIRM_PAYMENT_ROLE(),
+      accounts[0],
+      { $extraGas: 200000 },
+    );
 
-    factory = await LPPCampaignFactory.new(web3, accounts[0], accounts[1], {gas: 6500000});
-    await factory.deploy(liquidPledging.$address, 'Campaign 1', 'URL1', 0, reviewer1, 'Campaign 1 Token', 'CPG', accounts[0], accounts[1], {from: campaignOwner1}); // pledgeAdmin #1
+    giver1Token = await StandardTokenTest.new(web3);
+    await giver1Token.mint(giver1, web3.utils.toWei('1000'));
+    await giver1Token.approve(liquidPledging.$address, '0xFFFFFFFFFFFFFFFF', { from: giver1 });
+
+    const tokenFactory = await MiniMeTokenFactory.new(web3, { gas: 3000000 });
+    factory = await LPPCampaignFactory.new(
+      web3,
+      kernel.$address,
+      tokenFactory.$address,
+      accounts[0],
+      accounts[1],
+      { gas: 6000000 },
+    );
+    await acl.grantPermission(factory.$address, acl.$address, await acl.CREATE_PERMISSIONS_ROLE(), {
+      $extraGas: 200000,
+    });
+    await acl.grantPermission(
+      factory.$address,
+      liquidPledging.$address,
+      await liquidPledging.PLUGIN_MANAGER_ROLE(),
+      { $extraGas: 200000 },
+    );
+
+    const campaignApp = await LPPCampaign.new(web3, accounts[0]);
+    await kernel.setApp(
+      await kernel.APP_BASES_NAMESPACE(),
+      await factory.CAMPAIGN_APP_ID(),
+      campaignApp.$address,
+      { $extraGas: 200000 },
+    );
+
+    await factory.newCampaign(
+      'Campaign 1',
+      'URL1',
+      0,
+      reviewer1,
+      'Campaign 1 Token',
+      'CPG',
+      accounts[0],
+      accounts[1],
+      { from: campaignOwner1 },
+    );
 
     const lpState = await liquidPledgingState.getState();
     assert.equal(lpState.admins.length, 2);
     const lpManager = lpState.admins[1];
 
     campaign = new LPPCampaign(web3, lpManager.plugin);
+    campaignState = new LPPCampaignState(campaign);
 
-    minime = new MiniMeToken(web3, await campaign.token());
+    minime = new MiniMeToken(web3, await campaign.campaignToken());
     minimeTokenState = new MiniMeTokenState(minime);
 
     assert.equal(lpManager.type, 'Project');
@@ -86,7 +159,7 @@ describe('LPPCampaign test', function() {
     assert.equal(lpManager.commitTime, '0');
     assert.equal(lpManager.canceled, false);
 
-    const cState = await campaign.getState();
+    const cState = await campaignState.getState();
     assert.equal(cState.liquidPledging, liquidPledging.$address);
     assert.equal(cState.idProject, '1');
     assert.equal(cState.reviewer, reviewer1);
@@ -102,10 +175,11 @@ describe('LPPCampaign test', function() {
 
   it('Should accept transfers if not canceled and generate tokens', async function() {
     await liquidPledging.addGiver('Giver1', 'URL', 0, 0x0, { from: giver1 }); // pledgeAdmin #2
-    await liquidPledging.donate(2, 1, { from: giver1, value: 1000 });
+    await liquidPledging.donate(2, 1, giver1Token.$address, 1000, { from: giver1 });
 
     const st = await liquidPledgingState.getState();
     assert.equal(st.pledges[2].amount, 1000);
+    assert.equal(st.pledges[2].token, giver1Token.$address);
     assert.equal(st.pledges[2].owner, 1);
 
     const giverTokenBal = await minime.balanceOf(giver1);
@@ -115,8 +189,11 @@ describe('LPPCampaign test', function() {
   });
 
   it('Should be able to transfer pledge to another project', async function() {
-    await liquidPledging.addProject('Project1', 'URL', project1, 0, 0, 0x0, { from: project1, gas: 1000000 }); // pledgeAdmin #3
-    await campaign.transfer(2, 1000, 3, { from: campaignOwner1, gas: 300000 });
+    await liquidPledging.addProject('Project1', 'URL', project1, 0, 0, 0x0, {
+      from: project1,
+      $extraGas: 100000,
+    }); // pledgeAdmin #3
+    await campaign.transfer(2, 1000, 3, { from: campaignOwner1, $extraGas: 200000 });
 
     const st = await liquidPledgingState.getState();
     assert.equal(st.pledges[3].amount, 1000);
@@ -136,32 +213,42 @@ describe('LPPCampaign test', function() {
   });
 
   it('Should be able to change reviewer', async function() {
-    await campaign.changeReviewer(reviewer2, { from: reviewer1 });
+    await campaign.changeReviewer(reviewer2, { from: reviewer1, $extraGas: 100000 });
 
-    const st = await campaign.getState();
+    const st = await campaignState.getState();
     assert.equal(st.reviewer, reviewer1);
     assert.equal(st.newReviewer, reviewer2);
 
-    await campaign.acceptNewReviewer({ from: reviewer2, gas: 40000 });
+    await campaign.acceptNewReviewer({ from: reviewer2, $extraGas: 100000 });
 
-    const st2 = await campaign.getState();
+    const st2 = await campaignState.getState();
     assert.equal(st2.reviewer, reviewer2);
     assert.equal(st2.newReviewer, '0x0000000000000000000000000000000000000000');
   });
 
   it('Owner should not be able to change reviewer', async function() {
-    await assertFail(async () => await campaign.changeReviewer(reviewer1, { from: campaignOwner1 }));
+    await assertFail(campaign.changeReviewer(reviewer1, { from: campaignOwner1, gas: 6700000 }));
   });
 
   it('Reviewer should be able to cancel campaign', async function() {
-    await campaign.cancelCampaign({ from: reviewer2 });
+    await campaign.cancelCampaign({ from: reviewer2, $extraGas: 100000 });
 
     const canceled = await campaign.isCanceled();
     assert.equal(canceled, true);
   });
 
   it('Should deploy another campaign', async function() {
-    campaign = await factory.deploy(liquidPledging.$address, 'Campaign 2', 'URL2', 0, reviewer1, 'Campaign 2 Token', 'CPG2', accounts[0], accounts[1], { from: campaignOwner1 }); // pledgeAdmin #4
+    campaign = await factory.newCampaign(
+      'Campaign 2',
+      'URL2',
+      0,
+      reviewer1,
+      'Campaign 2 Token',
+      'CPG2',
+      accounts[0],
+      accounts[1],
+      { from: campaignOwner1 },
+    ); // pledgeAdmin #4
 
     const nPledgeAdmins = await liquidPledging.numberOfPledgeAdmins();
     const campaign2Admin = await liquidPledging.getPledgeAdmin(nPledgeAdmins);
@@ -171,12 +258,46 @@ describe('LPPCampaign test', function() {
     assert.equal(canceled, false);
   });
 
+  it('Should reject transfer for unapproved token', async function() {
+    const token2 = await StandardTokenTest.new(web3);
+    await token2.mint(giver1, web3.utils.toWei('1000'));
+    await token2.approve(liquidPledging.$address, '0xFFFFFFFFFFFFFFFF', { from: giver1 });
+
+    const params = [
+      // id: 204 (logic) op: OR(9) value: 2 or 1
+      // '0xcc09000000000000000000000000000000000000000000000000000200000001',
+      // id: 0 (arg 0) op: EQ(1) value: token2.$address
+      `0x000100000000000000000000${token2.$address.slice(2)}`,
+    ];
+    await campaign.setTransferPermissions(params, { from: campaignOwner1, $extraGas: 100000 });
+
+    await assertFail(
+      liquidPledging.donate(2, 1, giver1Token.$address, 1000, { from: giver1, gas: 4000000 }),
+    );
+
+    await liquidPledging.donate(2, 4, token2.$address, 1000, { from: giver1, $extraGas: 100000 });
+
+    const st = await liquidPledgingState.getState();
+    assert.equal(st.pledges[6].amount, 1000);
+    assert.equal(st.pledges[6].owner, 4);
+  });
+
+  it('Should update project', async function() {
+    await campaign.update('new name', 'new url', 1010, { from: campaignOwner1, $extraGas: 100000 });
+
+    const c = await liquidPledging.getPledgeAdmin(4);
+    assert.equal(c.name, 'new name');
+    assert.equal(c.addr, campaign.$address);
+    assert.equal(c.url, 'new url');
+    assert.equal(c.commitTime, 1010);
+  });
+
   it('Random should not be able to cancel campaign', async function() {
-    await assertFail(async () => await campaign.cancelCampaign({ from: accounts[9] }));
+    await assertFail(campaign.cancelCampaign({ from: accounts[9], gas: 6700000 }));
   });
 
   it('Owner should be able to cancel campaign', async function() {
-    await campaign.cancelCampaign({ from: campaignOwner1 });
+    await campaign.cancelCampaign({ from: campaignOwner1, $extraGas: 100000 });
 
     const canceled = await campaign.isCanceled();
     assert.equal(canceled, true);
