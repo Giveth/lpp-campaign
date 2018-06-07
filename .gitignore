@@ -2,6 +2,7 @@ build/
 lib/
 node_modules/
 .DS_Store
+yarn-error.log
 
 .mypy_cache
 __pycache__

@@ -158,6 +158,29 @@ contract LPPCampaign is EscapableApp, TokenController {
         );
     }
 
+    uint constant D64 = 0x10000000000000000;
+
+    function mTransfer(
+        uint[] pledgesAmounts,
+        uint64 idReceiver
+    ) external
+    {
+        require(!isCanceled());
+
+        // TODO is there a more efficient way to do this? we can't pass array into canPerform function
+        // this has ~ 15k gas overhead / pledge vs a single authP
+        for (uint i = 0; i < pledgesAmounts.length; i++ ) {
+            uint amount = pledgesAmounts[i] / D64;
+            require(canPerform(msg.sender, ADMIN_ROLE, arr(amount, idReceiver)));
+        }
+
+        liquidPledging.mTransfer(
+            idProject,
+            pledgesAmounts,
+            idReceiver
+        );
+    }
+
     // allows the owner to send any tx, similar to a multi-sig
     // this is necessary b/c the campaign may receive dac/campaign tokens
     // if they transfer a pledge they own to another dac/campaign.

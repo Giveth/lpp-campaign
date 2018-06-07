@@ -64,7 +64,7 @@ describe('LPPCampaign test', function() {
   after(done => {
     testrpc.close();
     done();
-    process.exit();
+    setTimeout(process.exit, 2000);
   });
 
   it('Should deploy LPPCampaign contract and add project to liquidPledging', async () => {
@@ -301,5 +301,46 @@ describe('LPPCampaign test', function() {
 
     const canceled = await campaign.isCanceled();
     assert.equal(canceled, true);
+  });
+
+
+  it('Should transfer multiple pledges at once', async function() {
+    await factory.newCampaign(
+      'Campaign 3',
+      'URL3',
+      0,
+      reviewer1,
+      'Campaign 3 Token',
+      'CPG3',
+      accounts[0],
+      accounts[1],
+      { from: campaignOwner1 },
+    ); // pledgeAdmin #5
+
+    const campaign3Admin = await liquidPledging.getPledgeAdmin(5);
+    campaign = new LPPCampaign(web3, campaign3Admin.plugin);
+
+    await liquidPledging.donate(2, 5, giver1Token.$address, 1000, { from: giver1 });
+
+    const pledges = [{ amount: 10, id: 7 }, {amount: 9, id: 7}, { amount: 11, id: 7 }, { amount: 5, id: 7 }];
+
+    // .substring is to remove the 0x prefix on the toHex result
+    const encodedPledges = pledges.map(p => {
+      return (
+        '0x' +
+        web3.utils.padLeft(web3.utils.toHex(p.amount).substring(2), 48) +
+        web3.utils.padLeft(web3.utils.toHex(p.id).substring(2), 16)
+      );
+    });
+
+    await assertFail(campaign.mTransfer(encodedPledges, 3, { from: giver1, gas: 6700000 }));
+
+    await campaign.mTransfer(encodedPledges, 3, { from: campaignOwner1, $extraGas: 400000 });
+
+    const st = await liquidPledgingState.getState();
+    const p = liquidPledging.getPledge(8);
+    assert.equal(p.amount, 35);
+    assert.equal(p.oldPledge, 7);
+    assert.equal(p.owner, 3);
   });
 });
