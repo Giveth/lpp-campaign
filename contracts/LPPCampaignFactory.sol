@@ -4,11 +4,11 @@ import "./LPPCampaign.sol";
 import "minimetoken/contracts/MiniMeToken.sol";
 import "@aragon/os/contracts/factory/AppProxyFactory.sol";
 import "@aragon/os/contracts/kernel/Kernel.sol";
+import "@aragon/os/contracts/common/VaultRecoverable.sol";
 import "giveth-liquidpledging/contracts/LiquidPledging.sol";
 import "giveth-liquidpledging/contracts/LPConstants.sol";
-import "giveth-common-contracts/contracts/Escapable.sol";
 
-contract LPPCampaignFactory is LPConstants, Escapable, AppProxyFactory {
+contract LPPCampaignFactory is LPConstants, VaultRecoverable, AppProxyFactory {
     Kernel public kernel;
     MiniMeTokenFactory public tokenFactory;
 
@@ -18,8 +18,7 @@ contract LPPCampaignFactory is LPConstants, Escapable, AppProxyFactory {
 
     event DeployCampaign(address campaign);
 
-    function LPPCampaignFactory(address _kernel, address _tokenFactory, address _escapeHatchCaller, address _escapeHatchDestination)
-        Escapable(_escapeHatchCaller, _escapeHatchDestination) public
+    function LPPCampaignFactory(address _kernel, address _tokenFactory) public 
     {
         // note: this contract will need CREATE_PERMISSIONS_ROLE on the ACL
         // and the PLUGIN_MANAGER_ROLE on liquidPledging,
@@ -37,9 +36,7 @@ contract LPPCampaignFactory is LPConstants, Escapable, AppProxyFactory {
         uint64 parentProject,
         address reviewer,
         string tokenName,
-        string tokenSymbol,
-        address escapeHatchCaller,
-        address escapeHatchDestination
+        string tokenSymbol
     ) public
     {
         address campaignBase = kernel.getApp(CAMPAIGN_APP);
@@ -47,36 +44,35 @@ contract LPPCampaignFactory is LPConstants, Escapable, AppProxyFactory {
         address liquidPledging = kernel.getApp(LP_APP_INSTANCE);
         require(liquidPledging != 0);
 
-        // TODO: could make MiniMeToken an AragonApp to save gas by deploying a proxy
         address token = new MiniMeToken(tokenFactory, 0x0, 0, tokenName, 18, tokenSymbol, false);
         LPPCampaign campaign = LPPCampaign(newAppProxy(kernel, CAMPAIGN_APP_ID));
 
         LiquidPledging(liquidPledging).addValidPluginInstance(address(campaign));
 
-        campaign.initialize(liquidPledging, token, name, url, parentProject, reviewer, escapeHatchDestination);
+        campaign.initialize(liquidPledging, token, name, url, parentProject, reviewer);
         MiniMeToken(token).changeController(address(campaign));
 
-        _setPermissions(campaign, liquidPledging, escapeHatchCaller);
+        _setPermissions(campaign, liquidPledging);
 
         DeployCampaign(address(campaign));
     }
 
     function _setPermissions(
         LPPCampaign campaign,
-        address liquidPledging,
-        address escapeHatchCaller
+        address liquidPledging
     ) internal
     {
         ACL acl = ACL(kernel.acl());
 
-        bytes32 hatchCallerRole = campaign.ESCAPE_HATCH_CALLER_ROLE();
         bytes32 adminRole = campaign.ADMIN_ROLE();
         bytes32 acceptTransferRole = campaign.ACCEPT_TRANSFER_ROLE();
 
         acl.createPermission(liquidPledging, address(campaign), acceptTransferRole, address(campaign));
-        // this permission is managed by the escapeHatchCaller
-        acl.createPermission(escapeHatchCaller, address(campaign), hatchCallerRole, escapeHatchCaller);
         // this permission is managed by msg.sender
         acl.createPermission(msg.sender, address(campaign), adminRole, msg.sender);
+    }
+
+    function getRecoveryVault() public view returns (address) {
+        return kernel.getRecoveryVault();
     }
 }

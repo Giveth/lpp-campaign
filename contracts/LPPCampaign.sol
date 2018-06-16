@@ -1,10 +1,9 @@
 pragma solidity ^0.4.18;
 
 import "giveth-liquidpledging/contracts/LiquidPledging.sol";
-import "giveth-liquidpledging/contracts/EscapableApp.sol";
 import "minimetoken/contracts/MiniMeToken.sol";
+import "@aragon/os/contracts/apps/AragonApp.sol";
 import "@aragon/os/contracts/acl/ACL.sol";
-import "@aragon/os/contracts/kernel/KernelProxy.sol";
 
 
 /// @title LPPCampaign
@@ -19,7 +18,7 @@ import "@aragon/os/contracts/kernel/KernelProxy.sol";
 ///  restricted by amount of the transfer and/or which idAdmin they can transfer to.
 ///  If this contract is canceled, all pledges will be rolled back to the previous owner
 ///  and will reject all future pledge transfers to the pledgeAdmin represented by this contract
-contract LPPCampaign is EscapableApp, TokenController {
+contract LPPCampaign is AragonApp, TokenController {
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
 
     // used internally to control what transfers to accept
@@ -38,27 +37,19 @@ contract LPPCampaign is EscapableApp, TokenController {
 
     event GenerateTokens(address indexed liquidPledging, address addr, uint amount);
 
-    function LPPCampaign(address _escapeHatchDestination) EscapableApp(_escapeHatchDestination) public {}
-
-    function initialize(address _escapeHatchDestination) onlyInit public {
-        require(false); // overload the EscapableApp
-        _escapeHatchDestination;
-    }
-
     function initialize(
         address _liquidPledging,
         address _token,
         string name,
         string url,
         uint64 parentProject,
-        address _reviewer,
-        address _escapeHatchDestination
+        address _reviewer
     ) onlyInit external
     {
-        super.initialize(_escapeHatchDestination);
         require(_liquidPledging != 0);
         require(_token != 0);
         require(_reviewer != 0);
+        initialized();
 
         liquidPledging = LiquidPledging(_liquidPledging);
 
@@ -190,12 +181,21 @@ contract LPPCampaign is EscapableApp, TokenController {
         require(destination.call.value(value)(data));
     }
 
+    /**
+    * @dev By default, AragonApp will allow anyone to call transferToVault
+    *      We do not need this feature because the ADMIN_ROLE is able to execute
+    *      any tx as this contract by calling `sendTransaction`, Thus funds are
+    *      already recoverable
+    * @param token Token address that would be recovered
+    * @return bool whether the app allows the recovery
+    */
+    function allowRecoverability(address token) public view returns (bool) {
+        return false;
+    }
+
     // this allows the ADMIN to use the ACL permissions to control under what circumstances a transfer can be
     // made to this PledgeAdmin. Some examples are whitelisting tokens and/or who can donate
     function setTransferPermissions(uint[] params) external auth(ADMIN_ROLE) {
-        // hack until they fix the ACL regarding the require(!hasPermission) when setting another permission
-        // TODO: update to latest aragonOS as this is fixed
-        ACL(kernel.acl()).revokePermission(address(liquidPledging), address(this), ACCEPT_TRANSFER_ROLE);
         ACL(kernel.acl()).grantPermissionP(address(liquidPledging), address(this), ACCEPT_TRANSFER_ROLE, params);
     }
 
