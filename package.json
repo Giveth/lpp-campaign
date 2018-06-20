@@ -1,6 +1,6 @@
 {
   "name": "lpp-campaign",
-  "version": "1.0.0-beta.2",
+  "version": "1.0.0-beta.3",
   "description": "Simple campaign plugin with reviewer for liquidpledging.",
   "main": "index.js",
   "directories": {
@@ -34,8 +34,7 @@
   "dependencies": {
     "@aragon/os": "3.1.9",
     "chai": "^4.1.2",
-    "giveth-liquidpledging": "1.0.0-beta.4",
-    "minimetoken": "0.2.0"
+    "giveth-liquidpledging": "1.0.0-beta.4"
   },
   "devDependencies": {
     "babel-cli": "^6.26.0",
@@ -44,7 +43,7 @@
     "eth-contract-class": "0.0.12",
     "ganache-cli": "^6.0.1",
     "lerna": "^2.2.0",
-    "solcpiler": "1.0.0-beta.5",
+    "solcpiler": "1.0.0-beta.7",
     "solium": "^1.0.9",
     "web3": "1.0.0-beta.34"
   }

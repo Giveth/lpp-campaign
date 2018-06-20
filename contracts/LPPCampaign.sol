@@ -1,7 +1,6 @@
 pragma solidity ^0.4.18;
 
 import "giveth-liquidpledging/contracts/LiquidPledging.sol";
-import "minimetoken/contracts/MiniMeToken.sol";
 import "@aragon/os/contracts/apps/AragonApp.sol";
 import "@aragon/os/contracts/acl/ACL.sol";
 
@@ -18,7 +17,7 @@ import "@aragon/os/contracts/acl/ACL.sol";
 ///  restricted by amount of the transfer and/or which idAdmin they can transfer to.
 ///  If this contract is canceled, all pledges will be rolled back to the previous owner
 ///  and will reject all future pledge transfers to the pledgeAdmin represented by this contract
-contract LPPCampaign is AragonApp, TokenController {
+contract LPPCampaign is AragonApp {
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
 
     // used internally to control what transfers to accept
@@ -30,16 +29,12 @@ contract LPPCampaign is AragonApp, TokenController {
     uint constant TO_PROPOSEDPROJECT = 511;
 
     LiquidPledging public liquidPledging;
-    MiniMeToken public campaignToken;
     uint64 public idProject;
     address public reviewer;
     address public newReviewer;
 
-    event GenerateTokens(address indexed liquidPledging, address addr, uint amount);
-
     function initialize(
         address _liquidPledging,
-        address _token,
         string name,
         string url,
         uint64 parentProject,
@@ -47,7 +42,6 @@ contract LPPCampaign is AragonApp, TokenController {
     ) onlyInit external
     {
         require(_liquidPledging != 0);
-        require(_token != 0);
         require(_reviewer != 0);
         initialized();
 
@@ -62,7 +56,6 @@ contract LPPCampaign is AragonApp, TokenController {
             ILiquidPledgingPlugin(this)
         );
         reviewer = _reviewer;
-        campaignToken = MiniMeToken(_token);
     }
 
     function beforeTransfer(
@@ -103,20 +96,8 @@ contract LPPCampaign is AragonApp, TokenController {
         uint64 context,
         address token,
         uint amount
-    ) external
-	  {
+    ) external {
         require(msg.sender == address(liquidPledging));
-        var (, , , , , , , toPledgeState) = liquidPledging.getPledge(pledgeTo);
-        var (, fromOwner, , , , , , ) = liquidPledging.getPledge(pledgeFrom);
-
-        // only issue tokens when pledge is committed to this campaign
-        if ( (context == TO_OWNER) &&
-            (toPledgeState == LiquidPledgingStorage.PledgeState.Pledged)) {
-            var (, fromAddr , , , , , , ) = liquidPledging.getPledgeAdmin(fromOwner);
-
-            campaignToken.generateTokens(fromAddr, amount);
-            GenerateTokens(liquidPledging, fromAddr, amount);
-      }
     }
 
     function changeReviewer(address _newReviewer) external {
@@ -172,27 +153,6 @@ contract LPPCampaign is AragonApp, TokenController {
         );
     }
 
-    // allows the owner to send any tx, similar to a multi-sig
-    // this is necessary b/c the campaign may receive dac/campaign tokens
-    // if they transfer a pledge they own to another dac/campaign.
-    // this allows the owner to participate in governance with the tokens
-    // it holds.
-    function sendTransaction(address destination, uint value, bytes data) external auth(ADMIN_ROLE) {
-        require(destination.call.value(value)(data));
-    }
-
-    /**
-    * @dev By default, AragonApp will allow anyone to call transferToVault
-    *      We do not need this feature because the ADMIN_ROLE is able to execute
-    *      any tx as this contract by calling `sendTransaction`, Thus funds are
-    *      already recoverable
-    * @param token Token address that would be recovered
-    * @return bool whether the app allows the recovery
-    */
-    function allowRecoverability(address token) public view returns (bool) {
-        return false;
-    }
-
     // this allows the ADMIN to use the ACL permissions to control under what circumstances a transfer can be
     // made to this PledgeAdmin. Some examples are whitelisting tokens and/or who can donate
     function setTransferPermissions(uint[] params) external auth(ADMIN_ROLE) {
@@ -216,36 +176,5 @@ contract LPPCampaign is AragonApp, TokenController {
             newUrl,
             newCommitTime
         );
-    }
-
-////////////////
-// TokenController
-////////////////
-
-  /// @notice Called when `_owner` sends ether to the MiniMe Token contract
-  /// @param _owner The address that sent the ether to create tokens
-  /// @return True if the ether is accepted, false if it throws
-    function proxyPayment(address _owner) public payable returns(bool) {
-        return false;
-    }
-
-  /// @notice Notifies the controller about a token transfer allowing the
-  ///  controller to react if desired
-  /// @param _from The origin of the transfer
-  /// @param _to The destination of the transfer
-  /// @param _amount The amount of the transfer
-  /// @return False if the controller does not authorize the transfer
-    function onTransfer(address _from, address _to, uint _amount) public returns(bool) {
-        return false;
-    }
-
-  /// @notice Notifies the controller about an approval allowing the
-  ///  controller to react if desired
-  /// @param _owner The address that calls `approve()`
-  /// @param _spender The spender in the `approve()` call
-  /// @param _amount The amount in the `approve()` call
-  /// @return False if the controller does not authorize the approval
-    function onApprove(address _owner, address _spender, uint _amount) public returns(bool) {
-        return false;
     }
 }

@@ -1,7 +1,6 @@
 pragma solidity ^0.4.18;
 
 import "./LPPCampaign.sol";
-import "minimetoken/contracts/MiniMeToken.sol";
 import "@aragon/os/contracts/factory/AppProxyFactory.sol";
 import "@aragon/os/contracts/kernel/Kernel.sol";
 import "@aragon/os/contracts/common/VaultRecoverable.sol";
@@ -10,7 +9,6 @@ import "giveth-liquidpledging/contracts/LPConstants.sol";
 
 contract LPPCampaignFactory is LPConstants, VaultRecoverable, AppProxyFactory {
     Kernel public kernel;
-    MiniMeTokenFactory public tokenFactory;
 
     bytes32 constant public CAMPAIGN_APP_ID = keccak256("lpp-campaign");
     bytes32 constant public CAMPAIGN_APP = keccak256(APP_BASES_NAMESPACE, CAMPAIGN_APP_ID);
@@ -18,25 +16,21 @@ contract LPPCampaignFactory is LPConstants, VaultRecoverable, AppProxyFactory {
 
     event DeployCampaign(address campaign);
 
-    function LPPCampaignFactory(address _kernel, address _tokenFactory) public 
+    function LPPCampaignFactory(address _kernel) public 
     {
         // note: this contract will need CREATE_PERMISSIONS_ROLE on the ACL
         // and the PLUGIN_MANAGER_ROLE on liquidPledging,
         // the CAMPAIGN_APP and LP_APP_INSTANCE need to be registered with the kernel
 
         require(_kernel != 0x0);
-        require(_tokenFactory != 0x0);
         kernel = Kernel(_kernel);
-        tokenFactory = MiniMeTokenFactory(_tokenFactory);
     }
 
     function newCampaign(
         string name,
         string url,
         uint64 parentProject,
-        address reviewer,
-        string tokenName,
-        string tokenSymbol
+        address reviewer
     ) public
     {
         address campaignBase = kernel.getApp(CAMPAIGN_APP);
@@ -44,13 +38,11 @@ contract LPPCampaignFactory is LPConstants, VaultRecoverable, AppProxyFactory {
         address liquidPledging = kernel.getApp(LP_APP_INSTANCE);
         require(liquidPledging != 0);
 
-        address token = new MiniMeToken(tokenFactory, 0x0, 0, tokenName, 18, tokenSymbol, false);
         LPPCampaign campaign = LPPCampaign(newAppProxy(kernel, CAMPAIGN_APP_ID));
 
         LiquidPledging(liquidPledging).addValidPluginInstance(address(campaign));
 
-        campaign.initialize(liquidPledging, token, name, url, parentProject, reviewer);
-        MiniMeToken(token).changeController(address(campaign));
+        campaign.initialize(liquidPledging, name, url, parentProject, reviewer);
 
         _setPermissions(campaign, liquidPledging);
 

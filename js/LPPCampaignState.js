@@ -10,7 +10,6 @@ class LPPCampaignState {
       this.campaign.reviewer(),
       this.campaign.newReviewer(),
       this.campaign.isCanceled(),
-      this.campaign.campaignToken(),
     ])
       .then(results => ({
         liquidPledging: results[0],
@@ -18,7 +17,6 @@ class LPPCampaignState {
         reviewer: results[2],
         newReviewer: results[3],
         canceled: results[4],
-        campaignToken: results[5]
       }));
   }
 }

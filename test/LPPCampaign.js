@@ -4,7 +4,6 @@ const Ganache = require('ganache-cli');
 const { LPPCampaign, LPPCampaignFactory } = require('../index');
 const { Kernel, ACL, test } = require('giveth-liquidpledging');
 const LPPCampaignState = require('../lib/LPPCampaignState');
-const { MiniMeToken, MiniMeTokenFactory, MiniMeTokenState } = require('minimetoken');
 const Web3 = require('web3');
 const { assert } = require('chai');
 
@@ -23,8 +22,6 @@ describe('LPPCampaign test', function() {
   let campaignState;
   let acl;
   let kernel;
-  let minime;
-  let minimeTokenState;
   let giver1;
   let project1;
   let campaignOwner1;
@@ -83,8 +80,7 @@ describe('LPPCampaign test', function() {
   });
 
   it('Should deploy LPPCampaign contract and add project to liquidPledging', async () => {
-    const tokenFactory = await MiniMeTokenFactory.new(web3, { gas: 3000000 });
-    factory = await LPPCampaignFactory.new(web3, kernel.$address, tokenFactory.$address, {
+    factory = await LPPCampaignFactory.new(web3, kernel.$address, {
       gas: 6000000,
     });
     await acl.grantPermission(factory.$address, acl.$address, await acl.CREATE_PERMISSIONS_ROLE(), {
@@ -105,7 +101,7 @@ describe('LPPCampaign test', function() {
       { $extraGas: 200000 },
     );
 
-    await factory.newCampaign('Campaign 1', 'URL1', 0, reviewer1, 'Campaign 1 Token', 'CPG', {
+    await factory.newCampaign('Campaign 1', 'URL1', 0, reviewer1, {
       from: campaignOwner1,
     });
 
@@ -117,9 +113,6 @@ describe('LPPCampaign test', function() {
     campaignState = new LPPCampaignState(campaign);
 
     assert.isAbove(Number(await campaign.getInitializationBlock()), 0);
-
-    minime = new MiniMeToken(web3, await campaign.campaignToken());
-    minimeTokenState = new MiniMeTokenState(minime);
 
     assert.equal(lpManager.type, 'Project');
     assert.equal(lpManager.addr, campaign.$address);
@@ -133,15 +126,9 @@ describe('LPPCampaign test', function() {
     assert.equal(cState.reviewer, reviewer1);
     assert.equal(cState.newReviewer, '0x0000000000000000000000000000000000000000');
     assert.equal(cState.canceled, false);
-
-    const tState = await minimeTokenState.getState();
-    assert.equal(tState.totalSupply, 0);
-    assert.equal(tState.name, 'Campaign 1 Token');
-    assert.equal(tState.controller, campaign.$address);
-    assert.equal(await minime.symbol(), 'CPG');
   });
 
-  it('Should accept transfers if not canceled and generate tokens', async function() {
+  it('Should accept transfers if not canceled', async function() {
     await liquidPledging.addGiver('Giver1', 'URL', 0, 0x0, { from: giver1 }); // pledgeAdmin #2
     await liquidPledging.donate(2, 1, giver1Token.$address, 1000, { from: giver1 });
 
@@ -149,11 +136,6 @@ describe('LPPCampaign test', function() {
     assert.equal(st.pledges[2].amount, 1000);
     assert.equal(st.pledges[2].token, giver1Token.$address);
     assert.equal(st.pledges[2].owner, 1);
-
-    const giverTokenBal = await minime.balanceOf(giver1);
-    const totalTokenSupply = await minime.totalSupply();
-    assert.equal(giverTokenBal, 1000);
-    assert.equal(totalTokenSupply, 1000);
   });
 
   it('Should be able to transfer pledge to another project', async function() {
@@ -167,17 +149,6 @@ describe('LPPCampaign test', function() {
     assert.equal(st.pledges[3].amount, 1000);
     assert.equal(st.pledges[3].owner, 3);
     assert.equal(st.pledges[2].amount, 0);
-  });
-
-  it('Should generate tokens in project -> project transfer', async function() {
-    await liquidPledging.transfer(3, 3, 1000, 1, { from: project1 });
-
-    const st = await liquidPledgingState.getState();
-    assert.equal(st.pledges[4].amount, 1000);
-    assert.equal(st.pledges[3].amount, 0);
-
-    const totalTokenSupply = await minime.totalSupply();
-    assert.equal(totalTokenSupply, 2000);
   });
 
   it('Should be able to change reviewer', async function() {
@@ -211,8 +182,6 @@ describe('LPPCampaign test', function() {
       'URL2',
       0,
       reviewer1,
-      'Campaign 2 Token',
-      'CPG2',
       { from: campaignOwner1 },
     ); // pledgeAdmin #4
 
@@ -244,8 +213,8 @@ describe('LPPCampaign test', function() {
     await liquidPledging.donate(2, 4, token2.$address, 1000, { from: giver1, $extraGas: 100000 });
 
     const st = await liquidPledgingState.getState();
-    assert.equal(st.pledges[6].amount, 1000);
-    assert.equal(st.pledges[6].owner, 4);
+    assert.equal(st.pledges[5].amount, 1000);
+    assert.equal(st.pledges[5].owner, 4);
   });
 
   it('Should update project', async function() {
@@ -270,20 +239,20 @@ describe('LPPCampaign test', function() {
   });
 
   it('Should transfer multiple pledges at once', async function() {
-    await factory.newCampaign('Campaign 3', 'URL3', 0, reviewer1, 'Campaign 3 Token', 'CPG3', {
+    await factory.newCampaign('Campaign 3', 'URL3', 0, reviewer1, {
       from: campaignOwner1,
     }); // pledgeAdmin #5
 
     const campaign3Admin = await liquidPledging.getPledgeAdmin(5);
     campaign = new LPPCampaign(web3, campaign3Admin.plugin);
 
-    await liquidPledging.donate(2, 5, giver1Token.$address, 1000, { from: giver1 });
+    await liquidPledging.donate(2, 5, giver1Token.$address, 1000, { from: giver1, $extraGas: 100000 });
 
     const pledges = [
-      { amount: 10, id: 7 },
-      { amount: 9, id: 7 },
-      { amount: 11, id: 7 },
-      { amount: 5, id: 7 },
+      { amount: 10, id: 6 },
+      { amount: 9, id: 6 },
+      { amount: 11, id: 6 },
+      { amount: 5, id: 6 },
     ];
 
     // .substring is to remove the 0x prefix on the toHex result
@@ -299,15 +268,9 @@ describe('LPPCampaign test', function() {
 
     await campaign.mTransfer(encodedPledges, 3, { from: campaignOwner1, $extraGas: 400000 });
 
-    const p = await liquidPledging.getPledge(8);
+    const p = await liquidPledging.getPledge(7);
     assert.equal(p.amount, 35);
-    assert.equal(p.oldPledge, 7);
+    assert.equal(p.oldPledge, 6);
     assert.equal(p.owner, 3);
-  });
-
-  it('Should reject "escapeHatch" attempts', async function() {
-    await assertFail(campaign.transferToVault(giver1Token.$address, { from: campaignOwner1, gas: 6700000 }));
-    assert.equal(await campaign.allowRecoverability(0x0), false);
-    assert.equal(await campaign.allowRecoverability(giver1Token.$address), false);
   });
 });
