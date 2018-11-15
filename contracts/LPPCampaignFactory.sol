@@ -1,29 +1,27 @@
-pragma solidity ^0.4.18;
+pragma solidity ^0.4.25;
 
 import "./LPPCampaign.sol";
-import "@aragon/os/contracts/factory/AppProxyFactory.sol";
-import "@aragon/os/contracts/kernel/Kernel.sol";
 import "@aragon/os/contracts/common/VaultRecoverable.sol";
 import "giveth-liquidpledging/contracts/LiquidPledging.sol";
 import "giveth-liquidpledging/contracts/LPConstants.sol";
+import "giveth-liquidpledging/contracts/lib/aragon/IKernelEnhanced.sol";
 
-contract LPPCampaignFactory is LPConstants, VaultRecoverable, AppProxyFactory {
-    Kernel public kernel;
+contract LPPCampaignFactory is LPConstants, VaultRecoverable {
+    IKernelEnhanced public kernel;
 
-    bytes32 constant public CAMPAIGN_APP_ID = keccak256("lpp-campaign");
-    bytes32 constant public CAMPAIGN_APP = keccak256(APP_BASES_NAMESPACE, CAMPAIGN_APP_ID);
-    bytes32 constant public LP_APP_INSTANCE = keccak256(APP_ADDR_NAMESPACE, LP_APP_ID);
+    // bytes32 constant public CAMPAIGN_APP_ID = keccak256("lpp-campaign");
+    bytes32 constant public CAMPAIGN_APP_ID = 0xb645d68dd4f7ddd2bee6043ca156085bc75ba46cc3b5f2e58d04942e24095eac;
 
     event DeployCampaign(address campaign);
 
-    function LPPCampaignFactory(address _kernel) public 
+    constructor(IKernelEnhanced _kernel) public 
     {
         // note: this contract will need CREATE_PERMISSIONS_ROLE on the ACL
         // and the PLUGIN_MANAGER_ROLE on liquidPledging,
         // the CAMPAIGN_APP and LP_APP_INSTANCE need to be registered with the kernel
 
-        require(_kernel != 0x0);
-        kernel = Kernel(_kernel);
+        require(address(_kernel) != address(0));
+        kernel = _kernel;
     }
 
     function newCampaign(
@@ -33,28 +31,19 @@ contract LPPCampaignFactory is LPConstants, VaultRecoverable, AppProxyFactory {
         address reviewer
     ) public
     {
-        address campaignBase = kernel.getApp(CAMPAIGN_APP);
-        require(campaignBase != 0);
-        address liquidPledging = kernel.getApp(LP_APP_INSTANCE);
-        require(liquidPledging != 0);
+        address campaignBase = kernel.getApp(kernel.APP_BASES_NAMESPACE(), CAMPAIGN_APP_ID);
+        require(campaignBase != address(0));
+        address liquidPledging = kernel.getApp(kernel.APP_ADDR_NAMESPACE(), LP_APP_ID);
+        require(liquidPledging != address(0));
 
-        LPPCampaign campaign = LPPCampaign(newAppProxy(kernel, CAMPAIGN_APP_ID));
+        LPPCampaign campaign = LPPCampaign(kernel.newAppInstance(CAMPAIGN_APP_ID, campaignBase));
 
         LiquidPledging(liquidPledging).addValidPluginInstance(address(campaign));
 
         campaign.initialize(liquidPledging, name, url, parentProject, reviewer);
 
-        _setPermissions(campaign, liquidPledging);
 
-        DeployCampaign(address(campaign));
-    }
-
-    function _setPermissions(
-        LPPCampaign campaign,
-        address liquidPledging
-    ) internal
-    {
-        ACL acl = ACL(kernel.acl());
+        IACLEnhanced acl = IACLEnhanced(kernel.acl());
 
         bytes32 adminRole = campaign.ADMIN_ROLE();
         bytes32 acceptTransferRole = campaign.ACCEPT_TRANSFER_ROLE();
@@ -62,6 +51,8 @@ contract LPPCampaignFactory is LPConstants, VaultRecoverable, AppProxyFactory {
         acl.createPermission(liquidPledging, address(campaign), acceptTransferRole, address(campaign));
         // this permission is managed by msg.sender
         acl.createPermission(msg.sender, address(campaign), adminRole, msg.sender);
+
+        emit DeployCampaign(address(campaign));
     }
 
     function getRecoveryVault() public view returns (address) {
