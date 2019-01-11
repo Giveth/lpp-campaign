@@ -1,23 +1,27 @@
 /* eslint-env mocha */
 /* eslint-disable no-await-in-loop */
-const Ganache = require('ganache-cli');
-const { LPPCampaign, LPPCampaignFactory } = require('../index');
-const { Kernel, ACL, test } = require('giveth-liquidpledging');
-const LPPCampaignState = require('../lib/LPPCampaignState');
-const Web3 = require('web3');
 const { assert } = require('chai');
+const LPPCampaignState = require('../js/LPPCampaignState');
 
-const { StandardTokenTest, assertFail, deployLP } = test;
+const { assertFail, deployLP } = require('giveth-liquidpledging').test;
+
+const LPPCampaignFactory = embark.require('Embark/contracts/LPPCampaignFactory');
+const LPPCampaign = embark.require('Embark/contracts/LPPCampaign');
+const Kernel = embark.require('Embark/contracts/Kernel');
+const ACL = embark.require('Embark/contracts/ACL');
+const StandardTokenTest = embark.require('Embark/contracts/StandardToken');
+
+config({
+  LPPCampaign: {},
+});
 
 describe('LPPCampaign test', function() {
   this.timeout(0);
 
-  let web3;
   let accounts;
   let liquidPledging;
   let liquidPledgingState;
   let vault;
-  let factory;
   let campaign;
   let campaignState;
   let acl;
@@ -31,23 +35,14 @@ describe('LPPCampaign test', function() {
   let giver1Token;
 
   before(async () => {
-    ganache = Ganache.server({
-      ws: true,
-      gasLimit: 9700000,
-      total_accounts: 10,
-    });
-
-    ganache.listen(8545, '127.0.0.1', err => {});
-
-    web3 = new Web3('http://localhost:8545');
-    accounts = await web3.eth.getAccounts();
+    const deployment = await deployLP(web3);
+    accounts = deployment.accounts;
 
     project1 = accounts[2];
     campaignOwner1 = accounts[3];
     reviewer1 = accounts[4];
     reviewer2 = accounts[5];
 
-    const deployment = await deployLP(web3);
     giver1 = deployment.giver1;
     vault = deployment.vault;
     liquidPledging = deployment.liquidPledging;
@@ -55,8 +50,8 @@ describe('LPPCampaign test', function() {
     giver1Token = deployment.token;
 
     // set permissions
-    kernel = new Kernel(web3, await liquidPledging.kernel());
-    acl = new ACL(web3, await kernel.acl());
+    kernel = Kernel.at(await liquidPledging.kernel());
+    acl = ACL.at(await kernel.acl());
     await acl.createPermission(
       accounts[0],
       vault.$address,
@@ -73,16 +68,8 @@ describe('LPPCampaign test', function() {
     );
   });
 
-  after(done => {
-    ganache.close();
-    done();
-    setTimeout(process.exit, 2000);
-  });
-
   it('Should deploy LPPCampaign contract and add project to liquidPledging', async () => {
-    factory = await LPPCampaignFactory.new(web3, kernel.$address, {
-      gas: 6000000,
-    });
+    factory = await LPPCampaignFactory.new(kernel.$address);
     await acl.grantPermission(factory.$address, acl.$address, await acl.CREATE_PERMISSIONS_ROLE(), {
       $extraGas: 200000,
     });
@@ -93,11 +80,10 @@ describe('LPPCampaign test', function() {
       { $extraGas: 200000 },
     );
 
-    const campaignApp = await LPPCampaign.new(web3);
     await kernel.setApp(
       await kernel.APP_BASES_NAMESPACE(),
       await factory.CAMPAIGN_APP_ID(),
-      campaignApp.$address,
+      LPPCampaign.$address,
       { $extraGas: 200000 },
     );
 
@@ -109,7 +95,7 @@ describe('LPPCampaign test', function() {
     assert.equal(lpState.admins.length, 2);
     const lpManager = lpState.admins[1];
 
-    campaign = new LPPCampaign(web3, lpManager.plugin);
+    campaign = LPPCampaign.at(lpManager.plugin);
     campaignState = new LPPCampaignState(campaign);
 
     assert.isAbove(Number(await campaign.getInitializationBlock()), 0);
@@ -177,17 +163,13 @@ describe('LPPCampaign test', function() {
   });
 
   it('Should deploy another campaign', async function() {
-    campaign = await factory.newCampaign(
-      'Campaign 2',
-      'URL2',
-      0,
-      reviewer1,
-      { from: campaignOwner1 },
-    ); // pledgeAdmin #4
+    campaign = await factory.newCampaign('Campaign 2', 'URL2', 0, reviewer1, {
+      from: campaignOwner1,
+    }); // pledgeAdmin #4
 
     const nPledgeAdmins = await liquidPledging.numberOfPledgeAdmins();
     const campaign2Admin = await liquidPledging.getPledgeAdmin(nPledgeAdmins);
-    campaign = new LPPCampaign(web3, campaign2Admin.plugin);
+    campaign = LPPCampaign.at(campaign2Admin.plugin);
 
     const canceled = await campaign.isCanceled();
     assert.equal(canceled, false);
@@ -244,9 +226,12 @@ describe('LPPCampaign test', function() {
     }); // pledgeAdmin #5
 
     const campaign3Admin = await liquidPledging.getPledgeAdmin(5);
-    campaign = new LPPCampaign(web3, campaign3Admin.plugin);
+    campaign = LPPCampaign.at(campaign3Admin.plugin);
 
-    await liquidPledging.donate(2, 5, giver1Token.$address, 1000, { from: giver1, $extraGas: 100000 });
+    await liquidPledging.donate(2, 5, giver1Token.$address, 1000, {
+      from: giver1,
+      $extraGas: 100000,
+    });
 
     const pledges = [
       { amount: 10, id: 6 },

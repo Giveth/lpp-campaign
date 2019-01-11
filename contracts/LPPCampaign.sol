@@ -1,8 +1,8 @@
-pragma solidity ^0.4.18;
+pragma solidity ^0.4.24;
 
 import "giveth-liquidpledging/contracts/LiquidPledging.sol";
+import "giveth-liquidpledging/contracts/lib/aragon/IACLEnhanced.sol";
 import "@aragon/os/contracts/apps/AragonApp.sol";
-import "@aragon/os/contracts/acl/ACL.sol";
 
 
 /// @title LPPCampaign
@@ -68,8 +68,8 @@ contract LPPCampaign is AragonApp {
     ) external returns (uint maxAllowed)
 	  {
         require(msg.sender == address(liquidPledging));
-        var (, fromOwner, , fromProposedProject , , , , ) = liquidPledging.getPledge(pledgeFrom);
-        var (, , , , , , , toPledgeState ) = liquidPledging.getPledge(pledgeTo);
+        (, uint64 fromOwner, , uint64 fromProposedProject , , , , ) = liquidPledging.getPledge(pledgeFrom);
+        (, , , , , , , LiquidPledgingStorage.PledgeState toPledgeState ) = liquidPledging.getPledge(pledgeTo);
 
         // campaigns can not withdraw funds
         if ( (context == TO_OWNER) && (toPledgeState != LiquidPledgingStorage.PledgeState.Pledged) ) {
@@ -156,7 +156,7 @@ contract LPPCampaign is AragonApp {
     // this allows the ADMIN to use the ACL permissions to control under what circumstances a transfer can be
     // made to this PledgeAdmin. Some examples are whitelisting tokens and/or who can donate
     function setTransferPermissions(uint[] params) external auth(ADMIN_ROLE) {
-        ACL(kernel.acl()).grantPermissionP(address(liquidPledging), address(this), ACCEPT_TRANSFER_ROLE, params);
+        IACLEnhanced(kernel().acl()).grantPermissionP(address(liquidPledging), address(this), ACCEPT_TRANSFER_ROLE, params);
     }
 
     function isCanceled() public view returns (bool) {

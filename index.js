@@ -1,15 +1,9 @@
 const generateClass = require('eth-contract-class').default;
 
-const factoryArtifact = require('./build/LPPCampaignFactory.json');
-const campaignArtifact = require('./build/LPPCampaign.json');
+const factoryArtifact = require('./dist/contracts/LPPCampaignFactory.json');
+const campaignArtifact = require('./dist/contracts/LPPCampaign.json');
 
 module.exports = {
-  LPPCampaign: generateClass(
-    campaignArtifact.compilerOutput.abi,
-    campaignArtifact.compilerOutput.evm.bytecode.object,
-  ),
-  LPPCampaignFactory: generateClass(
-    factoryArtifact.compilerOutput.abi,
-    factoryArtifact.compilerOutput.evm.bytecode.object,
-  ),
+  LPPCampaign: generateClass(campaignArtifact.abiDefinition, campaignArtifact.code),
+  LPPCampaignFactory: generateClass(factoryArtifact.abiDefinition, factoryArtifact.code),
 };
