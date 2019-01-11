@@ -1,4 +1,4 @@
-pragma solidity ^0.4.24;
+pragma solidity ^0.4.25;
 
 import "giveth-liquidpledging/contracts/LiquidPledging.sol";
 import "giveth-liquidpledging/contracts/lib/aragon/IACLEnhanced.sol";
@@ -23,10 +23,10 @@ contract LPPCampaign is AragonApp {
     // used internally to control what transfers to accept
     bytes32 public constant ACCEPT_TRANSFER_ROLE = keccak256("ACCEPT_TRANSFER_ROLE");
 
-    uint constant FROM_OWNER = 0;
-    uint constant FROM_PROPOSEDPROJECT = 255;
-    uint constant TO_OWNER = 256;
-    uint constant TO_PROPOSEDPROJECT = 511;
+    uint private constant FROM_OWNER = 0;
+    uint private constant FROM_PROPOSEDPROJECT = 255;
+    uint private constant TO_OWNER = 256;
+    uint private constant TO_PROPOSEDPROJECT = 511;
 
     LiquidPledging public liquidPledging;
     uint64 public idProject;
@@ -65,7 +65,7 @@ contract LPPCampaign is AragonApp {
         uint64 context,
         address token,
         uint amount
-    ) external returns (uint maxAllowed)
+    ) external view returns (uint maxAllowed)
 	  {
         require(msg.sender == address(liquidPledging));
         (, uint64 fromOwner, , uint64 fromProposedProject , , , , ) = liquidPledging.getPledge(pledgeFrom);
@@ -96,9 +96,7 @@ contract LPPCampaign is AragonApp {
         uint64 context,
         address token,
         uint amount
-    ) external {
-        require(msg.sender == address(liquidPledging));
-    }
+    ) external pure {}
 
     function changeReviewer(address _newReviewer) external {
         require(msg.sender == reviewer);
@@ -155,7 +153,7 @@ contract LPPCampaign is AragonApp {
 
     // this allows the ADMIN to use the ACL permissions to control under what circumstances a transfer can be
     // made to this PledgeAdmin. Some examples are whitelisting tokens and/or who can donate
-    function setTransferPermissions(uint[] params) external auth(ADMIN_ROLE) {
+    function setTransferPermissions(uint256[] params) external auth(ADMIN_ROLE) {
         IACLEnhanced(kernel().acl()).grantPermissionP(address(liquidPledging), address(this), ACCEPT_TRANSFER_ROLE, params);
     }
 
