@@ -1,18 +1,16 @@
 {
   "name": "lpp-campaign",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Simple campaign plugin with reviewer for liquidpledging.",
   "main": "index.js",
   "directories": {
     "lib": "lib"
   },
   "scripts": {
-    "test": "npm run compile && mocha --harmony",
-    "compile:sol": "solcpiler --solc-version v0.4.18+commit.9cf6e910",
-    "compile:js": "babel --source-maps -d lib/ js/",
+    "test": "embark test",
     "lint": "solium --dir contracts",
-    "compile": "npm run compile:sol",
-    "prepublish": "npm run compile"
+    "build": "embark build --contracts",
+    "prepublish": "npm run build"
   },
   "repository": {
     "type": "git",
@@ -32,18 +30,16 @@
   },
   "homepage": "https://github.com/Giveth/lpp-campaign#readme",
   "dependencies": {
-    "@aragon/os": "3.1.9",
+    "@aragon/os": "4.0.1",
     "chai": "^4.1.2",
-    "giveth-liquidpledging": "1.0.0"
+    "embark": "4.0.0-beta.0",
+    "giveth-liquidpledging": "2.0.0-beta.1"
   },
   "devDependencies": {
-    "babel-cli": "^6.26.0",
-    "babel-preset-env": "^1.6.0",
+    "embark-solc": "git+https://git@github.com/embark-framework/embark-solc.git#develop",
     "eslint": "^4.3.0",
-    "eth-contract-class": "0.0.12",
-    "ganache-cli": "^6.0.1",
+    "eth-contract-class": "^0.0.13-beta.1",
     "lerna": "^2.2.0",
-    "solcpiler": "1.0.0-beta.8",
     "solium": "^1.0.9",
     "web3": "1.0.0-beta.34"
   }
