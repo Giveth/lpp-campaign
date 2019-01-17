@@ -1,4 +1,4 @@
-pragma solidity ^0.4.25;
+pragma solidity ^0.4.24;
 
 import "giveth-liquidpledging/contracts/LiquidPledging.sol";
 import "giveth-liquidpledging/contracts/lib/aragon/IACLEnhanced.sol";

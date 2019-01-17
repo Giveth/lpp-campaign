@@ -1,4 +1,4 @@
-pragma solidity ^0.4.25;
+pragma solidity ^0.4.24;
 
 import "./LPPCampaign.sol";
 import "@aragon/os/contracts/common/VaultRecoverable.sol";
@@ -18,8 +18,8 @@ contract LPPCampaignFactory is LPConstants, VaultRecoverable {
     {
         // note: this contract will need CREATE_PERMISSIONS_ROLE on the ACL,
         // the PLUGIN_MANAGER_ROLE on liquidPledging, 
-        // and the APP_MANAGER_ROLE (KERNEL_APP_BASES_NAMESPACE, CAMPAIGN_APP_ID) on the Kernel
-        // the CAMPAIGN_APP and LP_APP_INSTANCE need to be registered with the kernel
+        // and the APP_MANAGER_ROLE (KERNEL_APP_BASES_NAMESPACE, CAMPAIGN_APP_ID) on the Kernel.
+        // The CAMPAIGN_APP and LP_APP_INSTANCE need to be registered with the kernel
 
         require(address(_kernel) != address(0));
         kernel = _kernel;

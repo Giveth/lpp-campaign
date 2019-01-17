@@ -3,7 +3,7 @@
 const { assert } = require('chai');
 const LPPCampaignState = require('../js/LPPCampaignState');
 
-const { assertFail, deployLP } = require('giveth-liquidpledging').test;
+const { assertFail, deployLP, embarkConfig } = require('giveth-liquidpledging').test;
 
 const LPPCampaignFactory = embark.require('Embark/contracts/LPPCampaignFactory');
 const LPPCampaign = embark.require('Embark/contracts/LPPCampaign');
@@ -11,7 +11,7 @@ const Kernel = embark.require('Embark/contracts/Kernel');
 const ACL = embark.require('Embark/contracts/ACL');
 const StandardTokenTest = embark.require('Embark/contracts/StandardToken');
 
-config({
+embarkConfig({
   LPPCampaign: {},
 });
 
@@ -35,7 +35,7 @@ describe('LPPCampaign test', function() {
   let giver1Token;
 
   before(async () => {
-    const deployment = await deployLP(web3);
+    const deployment = await deployLP();
     accounts = deployment.accounts;
 
     project1 = accounts[2];
@@ -79,6 +79,12 @@ describe('LPPCampaign test', function() {
       await liquidPledging.PLUGIN_MANAGER_ROLE(),
       { $extraGas: 200000 },
     );
+    await acl.grantPermission(
+      factory.$address,
+      kernel.$address,
+      await kernel.APP_MANAGER_ROLE(),
+      { $extraGas: 200000 },
+    );
 
     await kernel.setApp(
       await kernel.APP_BASES_NAMESPACE(),
@@ -115,7 +121,7 @@ describe('LPPCampaign test', function() {
   });
 
   it('Should accept transfers if not canceled', async function() {
-    await liquidPledging.addGiver('Giver1', 'URL', 0, 0x0, { from: giver1 }); // pledgeAdmin #2
+    await liquidPledging.addGiver('Giver1', 'URL', 0, '0x0000000000000000000000000000000000000000', { from: giver1 }); // pledgeAdmin #2
     await liquidPledging.donate(2, 1, giver1Token.$address, 1000, { from: giver1 });
 
     const st = await liquidPledgingState.getState();
@@ -125,7 +131,7 @@ describe('LPPCampaign test', function() {
   });
 
   it('Should be able to transfer pledge to another project', async function() {
-    await liquidPledging.addProject('Project1', 'URL', project1, 0, 0, 0x0, {
+    await liquidPledging.addProject('Project1', 'URL', project1, 0, 0, '0x0000000000000000000000000000000000000000', {
       from: project1,
       $extraGas: 100000,
     }); // pledgeAdmin #3

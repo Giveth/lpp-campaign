@@ -33,7 +33,7 @@
     "@aragon/os": "4.0.1",
     "chai": "^4.1.2",
     "embark": "4.0.0-beta.0",
-    "giveth-liquidpledging": "2.0.0-beta.0"
+    "giveth-liquidpledging": "2.0.0-beta.1"
   },
   "devDependencies": {
     "embark-solc": "git+https://git@github.com/embark-framework/embark-solc.git#develop",
