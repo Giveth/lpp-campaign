@@ -16,7 +16,7 @@ contract LPPCampaignFactory is LPConstants, VaultRecoverable {
 
     constructor(IKernelEnhanced _kernel) public 
     {
-        // note: this contract will need CREATE_PERMISSIONS_ROLE on the ACL,
+        // Note: This contract will need CREATE_PERMISSIONS_ROLE on the ACL,
         // the PLUGIN_MANAGER_ROLE on liquidPledging, 
         // and the APP_MANAGER_ROLE (KERNEL_APP_BASES_NAMESPACE, CAMPAIGN_APP_ID) on the Kernel.
         // The CAMPAIGN_APP and LP_APP_INSTANCE need to be registered with the kernel
