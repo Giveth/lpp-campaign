@@ -1,4 +1,4 @@
-const generateClass = require('eth-contract-class').default;
+const generateClass = require('@giveth/eth-contract-class').default;
 
 const factoryArtifact = require('./dist/contracts/LPPCampaignFactory.json');
 const campaignArtifact = require('./dist/contracts/LPPCampaign.json');

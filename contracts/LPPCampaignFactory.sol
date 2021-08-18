@@ -2,9 +2,9 @@ pragma solidity ^0.4.24;
 
 import "./LPPCampaign.sol";
 import "@aragon/os/contracts/common/VaultRecoverable.sol";
-import "giveth-liquidpledging/contracts/LiquidPledging.sol";
-import "giveth-liquidpledging/contracts/LPConstants.sol";
-import "giveth-liquidpledging/contracts/lib/aragon/IKernelEnhanced.sol";
+import "@giveth/liquidpledging-contract/contracts/LiquidPledging.sol";
+import "@giveth/liquidpledging-contract/contracts/LPConstants.sol";
+import "@giveth/liquidpledging-contract/contracts/lib/aragon/IKernelEnhanced.sol";
 
 contract LPPCampaignFactory is LPConstants, VaultRecoverable {
     IKernelEnhanced public kernel;
@@ -14,10 +14,10 @@ contract LPPCampaignFactory is LPConstants, VaultRecoverable {
 
     event DeployCampaign(address campaign);
 
-    constructor(IKernelEnhanced _kernel) public 
+    constructor(IKernelEnhanced _kernel) public
     {
         // Note: This contract will need CREATE_PERMISSIONS_ROLE on the ACL,
-        // the PLUGIN_MANAGER_ROLE on liquidPledging, 
+        // the PLUGIN_MANAGER_ROLE on liquidPledging,
         // and the APP_MANAGER_ROLE (KERNEL_APP_BASES_NAMESPACE, CAMPAIGN_APP_ID) on the Kernel.
         // The CAMPAIGN_APP and LP_APP_INSTANCE need to be registered with the kernel
 

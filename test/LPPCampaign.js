@@ -3,7 +3,7 @@
 const { assert } = require('chai');
 const LPPCampaignState = require('../js/LPPCampaignState');
 
-const { assertFail, deployLP, embarkConfig } = require('giveth-liquidpledging').test;
+const { assertFail, deployLP, embarkConfig } = require('@giveth/liquidpledging-contract').test;
 
 const LPPCampaignFactory = embark.require('Embark/contracts/LPPCampaignFactory');
 const LPPCampaign = embark.require('Embark/contracts/LPPCampaign');
