@@ -41,7 +41,7 @@
   },
   "devDependencies": {
     "chai": "^4.1.0",
-    "embark": "^4.1.1",
+    "embark": "^6.0.0",
     "embark-solc": "^4.1.1",
     "eslint": "^4.3.0",
     "eslint-config-airbnb": "^15.0.1",
